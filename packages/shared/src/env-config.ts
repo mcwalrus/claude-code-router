@@ -8,6 +8,7 @@
  *   CCR_HOST=0.0.0.0  -> config.HOST = "0.0.0.0"
  *   CCR_APIKEY=secret -> config.APIKEY = "secret"
  *   CCR_LOG_LEVEL=info -> config.LOG_LEVEL = "info"
+ *   CCR_PROXY_HOP=edge                 -> config.PROXY_HOP = "edge"
  *   CCR_PLUGINS='[{"name":"metrics","enabled":true}]'
  *                  -> config.plugins = [...]
  */
@@ -65,6 +66,7 @@ export function loadEnvConfig(options: EnvConfigOptions = {}): Record<string, an
   if (str("CCR_CUSTOM_ROUTER_PATH") !== undefined) result.CUSTOM_ROUTER_PATH = str("CCR_CUSTOM_ROUTER_PATH");
   if (str("CCR_CLAUDE_PATH") !== undefined) result.CLAUDE_PATH = str("CCR_CLAUDE_PATH");
   if (str("CCR_PROXY_URL") !== undefined) result.PROXY_URL = str("CCR_PROXY_URL");
+  if (str("CCR_PROXY_HOP") !== undefined) result.PROXY_HOP = str("CCR_PROXY_HOP");
 
   const routerDefault = str("CCR_ROUTER_DEFAULT");
   const routerThink = str("CCR_ROUTER_THINK");

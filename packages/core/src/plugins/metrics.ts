@@ -70,17 +70,19 @@ export const metricsPlugin: CCRPlugin = {
       registers: [registry],
     });
 
+    const hop = (fastify.configService?.get("PROXY_HOP") as string) || "local";
+
     const providerRouteCounter = new Counter({
       name: `${p}_provider_routes_total`,
       help: "LLM requests routed per provider, model and scenario",
-      labelNames: ["provider", "model", "scenario"],
+      labelNames: ["provider", "model", "scenario", "hop"],
       registers: [registry],
     });
 
     const tokenCounter = new Counter({
       name: `${p}_tokens_total`,
       help: "Token usage across all requests",
-      labelNames: ["provider", "model", "type"],
+      labelNames: ["provider", "model", "type", "hop"],
       registers: [registry],
     });
 
@@ -155,17 +157,17 @@ export const metricsPlugin: CCRPlugin = {
         const provider = (request as any).provider || "unknown";
         const model = (request.body as any)?.model || "unknown";
         const scenario = (request as any).scenarioType || "unknown";
-        providerRouteCounter.inc({ provider, model, scenario });
+        providerRouteCounter.inc({ provider, model, scenario, hop });
 
         // If non-streaming and usage already present, record tokens immediately
         if (!body?.stream && body?.usage) {
           const u = body.usage;
           if (u.input_tokens) {
-            tokenCounter.inc({ provider, model, type: "input" }, u.input_tokens);
+            tokenCounter.inc({ provider, model, type: "input", hop }, u.input_tokens);
           }
           if (u.output_tokens) {
             tokenCounter.inc(
-              { provider, model, type: "output" },
+              { provider, model, type: "output", hop },
               u.output_tokens
             );
           }
@@ -187,13 +189,13 @@ export const metricsPlugin: CCRPlugin = {
         if (usage) {
           if (usage.input_tokens) {
             tokenCounter.inc(
-              { provider, model, type: "input" },
+              { provider, model, type: "input", hop },
               usage.input_tokens
             );
           }
           if (usage.output_tokens) {
             tokenCounter.inc(
-              { provider, model, type: "output" },
+              { provider, model, type: "output", hop },
               usage.output_tokens
             );
           }
@@ -220,7 +222,7 @@ export const metricsPlugin: CCRPlugin = {
                 const u = data.data.usage;
                 if (u.output_tokens) {
                   tokenCounter.inc(
-                    { provider, model, type: "output" },
+                    { provider, model, type: "output", hop },
                     u.output_tokens
                   );
                 }

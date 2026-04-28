@@ -162,6 +162,12 @@ export const ConfigSchema = Type.Object(
           "HTTP proxy URL for upstream API requests, e.g. http://127.0.0.1:7890",
       })
     ),
+    PROXY_HOP: Type.Optional(
+      Type.String({
+        description:
+          'Identifies this CCR instance in a proxy chain (e.g. "edge", "dmz", "internal").  Added as the "hop" label to metrics so each position is visible.',
+      })
+    ),
     LOG: Type.Optional(
       Type.Boolean({
         default: true,
