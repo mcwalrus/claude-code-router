@@ -49,6 +49,16 @@ declare module "@musistudio/llms" {
   export const calculateTokenCount: (messages: any[], system: any, tools: any[]) => number;
   export const searchProjectBySession: (sessionId: string) => Promise<string | null>;
 
+  export interface RouterLogEntry {
+    timestamp: string;
+    requestId: string;
+    sessionId?: string;
+    model: string;
+    scenario: string;
+    tokenCount: number;
+  }
+  export function getRouterLogBuffer(): RouterLogEntry[];
+
   // Export services
   export class ConfigService {
     constructor(options?: any);
