@@ -1,4 +1,4 @@
-import Server, { calculateTokenCount, TokenizerService, getRouterLogBuffer } from "@musistudio/llms";
+import Server, { calculateTokenCount, TokenizerService, getRouterLogBuffer } from "@mcwalrus/llms";
 import { readConfigFile, writeConfigFile, backupConfigFile } from "./utils";
 import { join } from "path";
 import fastifyStatic from "@fastify/static";

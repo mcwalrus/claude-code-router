@@ -7,7 +7,7 @@ import { createServer } from "./server";
 import { apiKeyAuth } from "./middleware/auth";
 import { CONFIG_FILE, HOME_DIR, listPresets } from "@CCR/shared";
 import { createStream } from 'rotating-file-stream';
-import { sessionUsageCache } from "@musistudio/llms";
+import { sessionUsageCache } from "@mcwalrus/llms";
 import { SSEParserTransform } from "./utils/SSEParser.transform";
 import { SSESerializerTransform } from "./utils/SSESerializer.transform";
 import { rewriteStream } from "./utils/rewriteStream";
@@ -15,7 +15,7 @@ import JSON5 from "json5";
 import { IAgent, ITool } from "./agents/type";
 import agentsManager from "./agents";
 import { EventEmitter } from "node:events";
-import { pluginManager, tokenSpeedPlugin, metricsPlugin } from "@musistudio/llms";
+import { pluginManager, tokenSpeedPlugin, metricsPlugin } from "@mcwalrus/llms";
 
 const event = new EventEmitter()
 
@@ -485,7 +485,7 @@ export { getServer };
 export type { RunOptions };
 export type { IAgent, ITool } from "./agents/type";
 export { initDir, initConfig, readConfigFile, writeConfigFile, backupConfigFile } from "./utils";
-export { pluginManager, tokenSpeedPlugin } from "@musistudio/llms";
+export { pluginManager, tokenSpeedPlugin } from "@mcwalrus/llms";
 
 // Start service if this file is run directly
 if (require.main === module) {
