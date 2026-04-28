@@ -15,6 +15,16 @@ import { getThinkLevel } from "@/utils/thinking";
 import { createApiError } from "@/api/middleware";
 import { formatBase64 } from "@/utils/image";
 
+// Claude Code embeds control metadata like
+// `x-anthropic-billing-header: ...; cch=<per-request-hash>;` inside the
+// system prompt. The hash changes every turn, defeating prefix caching on
+// any non-Anthropic backend. These pseudo-headers are only meaningful to
+// the real Anthropic API, so strip them once during translation.
+const ANTHROPIC_PSEUDO_HEADER_RE = /^x-anthropic-[a-z-]+:[^\n]*\n?/gim;
+function stripAnthropicPseudoHeaders(text: string): string {
+  return text.replace(ANTHROPIC_PSEUDO_HEADER_RE, "");
+}
+
 export class AnthropicTransformer implements Transformer {
   name = "Anthropic";
   endPoint = "/v1/messages";
@@ -53,14 +63,14 @@ export class AnthropicTransformer implements Transformer {
       if (typeof request.system === "string") {
         messages.push({
           role: "system",
-          content: request.system,
+          content: stripAnthropicPseudoHeaders(request.system),
         });
       } else if (Array.isArray(request.system) && request.system.length) {
         const textParts = request.system
           .filter((item: any) => item.type === "text" && item.text)
           .map((item: any) => ({
             type: "text" as const,
-            text: item.text,
+            text: stripAnthropicPseudoHeaders(item.text),
             cache_control: item.cache_control,
           }));
         messages.push({
@@ -275,6 +285,7 @@ export class AnthropicTransformer implements Transformer {
         let isThinkingStarted = false;
         let contentIndex = 0;
         let currentContentBlockIndex = -1; // Track the current content block index
+        let currentContentBlockType: string | null = null; // Track the type of the current content block
 
         // 原子性的content block index分配函数
         const assignContentBlockIndex = (): number => {
@@ -328,6 +339,7 @@ export class AnthropicTransformer implements Transformer {
                   )
                 );
                 currentContentBlockIndex = -1;
+                currentContentBlockType = null;
               }
 
               if (stopReasonMessageDelta) {
@@ -540,6 +552,7 @@ export class AnthropicTransformer implements Transformer {
                       )
                     );
                     currentContentBlockIndex = thinkingBlockIndex;
+                    currentContentBlockType = 'thinking';
                     isThinkingStarted = true;
                   }
                   if (choice.delta.thinking.signature) {
@@ -570,6 +583,7 @@ export class AnthropicTransformer implements Transformer {
                       )
                     );
                     currentContentBlockIndex = -1;
+                    currentContentBlockType = null;
                   } else if (choice.delta.thinking.content) {
                     const thinkingChunk = {
                       type: "content_block_delta",
@@ -594,8 +608,8 @@ export class AnthropicTransformer implements Transformer {
 
                   // Close any previous content block if open and it's not a text content block
                   if (currentContentBlockIndex >= 0) {
-                    // Check if current content block is text type
-                    const isCurrentTextBlock = hasTextContentStarted;
+                    // Use currentContentBlockType to accurately determine if the current block is text
+                    const isCurrentTextBlock = currentContentBlockType === 'text';
                     if (!isCurrentTextBlock) {
                       const contentBlockStop = {
                         type: "content_block_stop",
@@ -609,10 +623,11 @@ export class AnthropicTransformer implements Transformer {
                         )
                       );
                       currentContentBlockIndex = -1;
+                      currentContentBlockType = null;
                     }
                   }
 
-                  if (!hasTextContentStarted && !hasFinished) {
+                  if (currentContentBlockIndex < 0 && !hasFinished) {
                     hasTextContentStarted = true;
                     const textBlockIndex = assignContentBlockIndex();
                     const contentBlockStart = {
@@ -631,6 +646,7 @@ export class AnthropicTransformer implements Transformer {
                       )
                     );
                     currentContentBlockIndex = textBlockIndex;
+                    currentContentBlockType = 'text';
                   }
 
                   if (!isClosed && !hasFinished) {
@@ -658,7 +674,7 @@ export class AnthropicTransformer implements Transformer {
                   !hasFinished
                 ) {
                   // Close text content block if open
-                  if (currentContentBlockIndex >= 0 && hasTextContentStarted) {
+                  if (currentContentBlockIndex >= 0 && currentContentBlockType === 'text') {
                     const contentBlockStop = {
                       type: "content_block_stop",
                       index: currentContentBlockIndex,
@@ -671,6 +687,7 @@ export class AnthropicTransformer implements Transformer {
                       )
                     );
                     currentContentBlockIndex = -1;
+                    currentContentBlockType = null;
                     hasTextContentStarted = false;
                   }
 
@@ -743,6 +760,7 @@ export class AnthropicTransformer implements Transformer {
                           )
                         );
                         currentContentBlockIndex = -1;
+                        currentContentBlockType = null;
                       }
 
                       const newContentBlockIndex = assignContentBlockIndex();
@@ -773,6 +791,7 @@ export class AnthropicTransformer implements Transformer {
                         )
                       );
                       currentContentBlockIndex = newContentBlockIndex;
+                      currentContentBlockType = 'tool_use';
 
                       const toolCallInfo = {
                         id: toolCallId,
@@ -876,6 +895,7 @@ export class AnthropicTransformer implements Transformer {
                       )
                     );
                     currentContentBlockIndex = -1;
+                    currentContentBlockType = null;
                   }
 
                   if (!isClosed) {
