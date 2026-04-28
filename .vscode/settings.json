@@ -1,0 +1,8 @@
+{
+  // Treat config files that contain comments as JSONC so editors/LSP don't flag them.
+  // config.example.jsonc: automatic via extension.
+  // The actual ~/.claude-code-router/config.json needs the glob below.
+  "files.associations": {
+    "**/claude-code-router/config.json": "jsonc"
+  }
+}

@@ -47,7 +47,7 @@ npm install -g @musistudio/claude-code-router
 
 ### 2. Configuration
 
-Create and configure your `~/.claude-code-router/config.json` file. For more details, you can refer to `config.example.json`.
+Create and configure your `~/.claude-code-router/config.json` file. For more details, you can refer to `config.example.jsonc`.
 
 The `config.json` file has several key sections:
 
@@ -200,10 +200,64 @@ Here is a comprehensive example:
     "think": "deepseek,deepseek-reasoner",
     "longContext": "openrouter,google/gemini-2.5-pro-preview",
     "longContextThreshold": 60000,
-    "webSearch": "gemini,gemini-2.5-flash"
+    "webSearch": "gemini,gemini-2.5-flash",
+    "image": "openrouter,anthropic/claude-sonnet-4"
   }
 }
 ```
+
+#### Applying Multiple Providers to the Router
+
+Each slot in the `Router` object can independently target a different `provider,model` pair, letting you optimise for cost, speed, and capability across task types — all from a single configuration file.
+
+| Slot | Triggered when | Recommended model type |
+|---|---|---|
+| `default` | All general requests | Most capable model available |
+| `background` | Claude Code requests a Haiku-variant model (model name contains `haiku`) | Cheap or local model (e.g. Ollama) |
+| `think` | Plan Mode (extended thinking enabled) | Model with strong reasoning / chain-of-thought |
+| `longContext` | Token count exceeds `longContextThreshold` | Model with a large context window |
+| `webSearch` | Request includes a `web_search` tool | Model with native search grounding |
+| `image` _(beta)_ | CCR's built-in image agent activates | Vision-capable / multimodal model |
+
+Because each provider uses its own `api_key: "$ENV_VAR"` reference, you only need to export the keys for the providers you actually use — unused providers do not require their variables to be set.
+
+```bash
+# Keys required for the example config above
+export ANTHROPIC_API_KEY=sk-ant-…   # default, think (background), image slots
+export OPENROUTER_API_KEY=sk-or-…   # longContext, webSearch slots
+export DEEPSEEK_API_KEY=sk-…        # think slot
+# Ollama runs locally — no key needed (background slot)
+```
+
+A complete annotated example is provided in [`config.example.jsonc`](./config.example.jsonc) at the repository root.
+
+When you need **fully independent routing profiles** (e.g. a cheap "fast" profile and a powerful "research" profile that callers can select at request time), use [`Routers`](#routers-header-based-multi-router) instead of `Router`. The two are mutually exclusive — when `Routers` is present, `Router` is ignored.
+
+#### Validating a Router Configuration
+
+There is no dedicated `ccr validate` command. Validation happens automatically at startup and at request time:
+
+1. **Startup schema check** — when `ccr start` loads `config.json`, the config is validated against a schema and any violations are printed as warnings before the server starts. Structural issues (wrong field type, invalid `provider,model` format, missing required `Routers.default` key) appear here. If a `Routers` block is present without a `"default"` key the server will refuse to start.
+
+2. **Token-count probe** — with the server running, send a lightweight request to confirm a specific `provider,model` pair resolves correctly:
+
+   ```bash
+   curl -s -X POST http://127.0.0.1:3456/v1/messages/count_tokens \
+     -H "x-api-key: your-secret-key" \
+     -H "Content-Type: application/json" \
+     -d '{"model": "deepseek,deepseek-chat", "messages": [{"role": "user", "content": "hi"}]}'
+   # Returns: {"input_tokens": <n>, "tokenizer": "tiktoken"}
+   ```
+
+   A successful response confirms the provider and model name are recognised. A `400` or `500` indicates a misconfiguration.
+
+3. **Live routing log** — set `"LOG_LEVEL": "debug"` in your config and watch the log file to see which slot and model each request is routed to:
+
+   ```bash
+   tail -f ~/.claude-code-router/logs/ccr-*.log | grep "scenarioType\|Using"
+   ```
+
+4. **Manual model override** — inside Claude Code, use `/model provider,model-name` to force a specific model and confirm the provider responds correctly before relying on automatic routing.
 
 ### 3. Running Claude Code with the Router
 
@@ -463,22 +517,29 @@ When `Routers` is present, `Router` is ignored.
 {
   "Routers": {
     "default": {
-      "default": "anthropic,claude-sonnet-4-5",
-      "background": "groq,llama-3.1-8b-instant",
-      "think": "openrouter,anthropic/claude-opus-4"
+      "default":    "anthropic,claude-sonnet-4-6",
+      "background": "ollama,qwen2.5-coder:latest",
+      "think":      "deepseek,deepseek-reasoner",
+      "longContext": "openrouter,google/gemini-2.5-pro-preview",
+      "longContextThreshold": 60000,
+      "webSearch":  "openrouter,google/gemini-2.5-flash:online"
     },
     "fast": {
-      "default": "groq,llama-3.1-8b-instant"
+      "default":    "anthropic,claude-haiku-4-5-20251001",
+      "background": "ollama,qwen2.5-coder:latest",
+      "think":      "deepseek,deepseek-chat"
     },
     "powerful": {
-      "default": "openrouter,anthropic/claude-opus-4",
-      "think": "openrouter,anthropic/claude-opus-4"
+      "default":    "anthropic,claude-opus-4-7",
+      "background": "anthropic,claude-haiku-4-5-20251001",
+      "think":      "anthropic,claude-opus-4-7",
+      "longContext": "openrouter,google/gemini-2.5-pro-preview"
     }
   }
 }
 ```
 
-Send `x-ccr-route: fast` to route to the `fast` profile. Omit the header to use `default`. If the header value does not match any key, `default` is used as a fallback.
+Send `x-ccr-route: fast` to use the lightweight profile. Send `x-ccr-route: powerful` for the high-quality profile. Omit the header (or send an unrecognised value) to fall back to `default`.
 
 > **Note:** `Routers` requires a `"default"` key. The server will refuse to start if it is missing.
 

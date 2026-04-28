@@ -1,0 +1,110 @@
+// config.example.jsonc — copy to ~/.claude-code-router/config.json and fill in your values.
+// Comments are stripped at load time; the actual config.json also supports them.
+// API keys are read from environment variables at startup — never hard-code them here.
+{
+  // Shared secret that clients must send in x-api-key or Authorization: Bearer.
+  // Required when HOST is not 127.0.0.1.
+  "APIKEY": "your-secret-key",
+  "HOST": "0.0.0.0",
+  "PORT": "3456",
+  "LOG_LEVEL": "info",        // fatal | error | warn | info | debug | trace
+  "API_TIMEOUT_MS": 600000,
+  "NON_INTERACTIVE_MODE": false,
+
+  // ── Providers ──────────────────────────────────────────────────────────────
+  // Declare one entry per API backend. api_key values use $VAR or ${VAR} syntax
+  // and are injected from environment variables at startup.
+  // Providers listed here but not referenced in Router/Routers are still
+  // available for manual selection via /model provider,model-name in Claude Code.
+  "Providers": [
+    {
+      // Direct Anthropic API — preserves native request/response format.
+      // Use this to route to Claude models without an intermediate gateway.
+      "name": "anthropic",
+      "api_base_url": "https://api.anthropic.com/v1/messages",
+      "api_key": "$ANTHROPIC_API_KEY",
+      "models": [
+        "claude-opus-4-7",
+        "claude-sonnet-4-6",
+        "claude-haiku-4-5-20251001"
+      ],
+      "transformer": { "use": ["anthropic"] }
+    },
+    {
+      // OpenRouter — multi-model gateway; append :online suffix for web-search grounding
+      "name": "openrouter",
+      "api_base_url": "https://openrouter.ai/api/v1/chat/completions",
+      "api_key": "$OPENROUTER_API_KEY",
+      "models": [
+        "google/gemini-2.5-pro-preview",
+        "google/gemini-2.5-flash:online"
+      ],
+      "transformer": { "use": ["openrouter"] }
+    },
+    {
+      // DeepSeek — strong reasoning at low cost; deepseek-reasoner for Plan Mode
+      "name": "deepseek",
+      "api_base_url": "https://api.deepseek.com/chat/completions",
+      "api_key": "$DEEPSEEK_API_KEY",
+      "models": ["deepseek-chat", "deepseek-reasoner"],
+      "transformer": {
+        "use": ["deepseek"],
+        "deepseek-chat": { "use": ["tooluse"] }
+      }
+    },
+    {
+      // Local Ollama — free, offline, no API key required
+      "name": "ollama",
+      "api_base_url": "http://localhost:11434/v1/chat/completions",
+      "api_key": "ollama",
+      "models": ["qwen2.5-coder:latest"]
+    }
+  ],
+
+  // ── Option A: single Router ─────────────────────────────────────────────────
+  // Maps each task-type slot to a "provider,model" string. Slots are independent —
+  // each can use a different provider to trade off cost, speed, and capability.
+  //
+  // To switch to named profiles, delete the entire "Router" block below and
+  // uncomment the "Routers" block in Option B. Both cannot be active at once.
+  "Router": {
+    "default":    "anthropic,claude-sonnet-4-6",            // balanced — general tasks
+    "background": "ollama,qwen2.5-coder:latest",            // free — indexing, summaries
+    "think":      "deepseek,deepseek-reasoner",             // cheap reasoning — Plan Mode
+    "longContext": "openrouter,google/gemini-2.5-pro-preview", // 1M-token context window
+    "longContextThreshold": 60000,
+    "webSearch":  "openrouter,google/gemini-2.5-flash:online", // native search grounding
+    "image":      "anthropic,claude-sonnet-4-6"             // vision / multimodal
+  }
+
+  // ── Option B: named Routers profiles ───────────────────────────────────────
+  // Use "Routers" to expose independently selectable routing sets. The active
+  // profile is chosen per-request via the x-ccr-route HTTP header.
+  // "default" is required — it is used when the header is absent or unrecognised.
+  //
+  // To activate: delete the "Router" block above, then remove the // from every
+  // line below (each line must be uncommented, including the outer braces).
+  //
+  // "Routers": {
+  //   "default": {                          // used when no x-ccr-route header is sent
+  //     "default":    "anthropic,claude-sonnet-4-6",
+  //     "background": "ollama,qwen2.5-coder:latest",
+  //     "think":      "deepseek,deepseek-reasoner",
+  //     "longContext": "openrouter,google/gemini-2.5-pro-preview",
+  //     "longContextThreshold": 60000,
+  //     "webSearch":  "openrouter,google/gemini-2.5-flash:online",
+  //     "image":      "anthropic,claude-sonnet-4-6"
+  //   },
+  //   "fast": {                             // x-ccr-route: fast  — minimise latency and cost
+  //     "default":    "anthropic,claude-haiku-4-5-20251001",
+  //     "background": "ollama,qwen2.5-coder:latest",
+  //     "think":      "deepseek,deepseek-chat"
+  //   },
+  //   "powerful": {                         // x-ccr-route: powerful  — maximise quality
+  //     "default":    "anthropic,claude-opus-4-7",
+  //     "background": "anthropic,claude-haiku-4-5-20251001",
+  //     "think":      "anthropic,claude-opus-4-7",
+  //     "longContext": "openrouter,google/gemini-2.5-pro-preview"
+  //   }
+  // }
+}
