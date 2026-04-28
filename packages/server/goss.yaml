@@ -12,6 +12,17 @@ http:
       Content-Type:
         - text/html
 
+  # Config JSON Schema — used by AI agents for config generation and validation
+  http://localhost:3456/api/config/schema:
+    status: 200
+    timeout: 5000
+    headers:
+      Content-Type:
+        - application/json
+    body:
+      - CCRConfig
+      - Claude Code Router Configuration
+
   # OpenAPI JSON spec — verifies content-type and spec identity
   http://localhost:3456/documentation/json:
     status: 200

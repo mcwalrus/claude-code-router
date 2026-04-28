@@ -4,6 +4,7 @@ import { join } from "path";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import fastifyStatic from "@fastify/static";
+import { ConfigSchema } from "@CCR/shared";
 import { readdirSync, statSync, readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, rmSync } from "fs";
 import { homedir } from "os";
 import {
@@ -111,8 +112,17 @@ export const createServer = async (config: any): Promise<any> => {
   });
 
   // Add endpoint to read config.json with access control
-  app.get("/api/config", async (req: any, reply: any) => {
+  app.get("/api/config", {
+    schema: { response: { 200: ConfigSchema } },
+  }, async (req: any, reply: any) => {
     return await readConfigFile();
+  });
+
+  // Return the JSON Schema for the config format — useful for AI agents and tooling
+  app.get("/api/config/schema", {
+    schema: { response: { 200: { type: "object", additionalProperties: true } } },
+  }, async () => {
+    return JSON.parse(JSON.stringify(ConfigSchema));
   });
 
   app.get("/api/transformers", async (req: any, reply: any) => {
@@ -128,7 +138,9 @@ export const createServer = async (config: any): Promise<any> => {
   });
 
   // Add endpoint to save config.json with access control
-  app.post("/api/config", async (req: any, reply: any) => {
+  app.post("/api/config", {
+    schema: { body: ConfigSchema },
+  }, async (req: any, reply: any) => {
     const newConfig = req.body;
 
     // Backup existing config file if it exists

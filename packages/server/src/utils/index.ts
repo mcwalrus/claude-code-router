@@ -7,6 +7,7 @@ import {
   DEFAULT_CONFIG,
   HOME_DIR,
   PLUGINS_DIR,
+  validateConfig,
 } from "@CCR/shared";
 
 // Function to interpolate environment variables in config values
@@ -72,7 +73,16 @@ export const readConfigFile = async () => {
       // Try to parse with JSON5 first (which also supports standard JSON)
       const parsedConfig = JSON5.parse(config);
       // Interpolate environment variables in the parsed config
-      return interpolateEnvVars(parsedConfig);
+      const interpolated = interpolateEnvVars(parsedConfig);
+      const validation = validateConfig(interpolated);
+      if (!validation.valid) {
+        console.warn(`Config validation warnings (${validation.errors.length} issue(s)):`);
+        validation.errors.slice(0, 5).forEach((e) => console.warn(`  ${e}`));
+        if (validation.errors.length > 5) {
+          console.warn(`  ...and ${validation.errors.length - 5} more`);
+        }
+      }
+      return interpolated;
     } catch (parseError) {
       console.error(`Failed to parse config file at ${CONFIG_FILE}`);
       console.error("Error details:", (parseError as Error).message);
