@@ -21,8 +21,7 @@
     "dev:ui": "pnpm --filter @CCR/ui dev",
     "dev:core": "pnpm --filter @musistudio/llms dev",
     "dev:docs": "pnpm --filter claude-code-router-docs start",
-    "serve:docs": "pnpm --filter claude-code-router-docs serve",
-    "ci": "pnpm install --frozen-lockfile"
+    "serve:docs": "pnpm --filter claude-code-router-docs serve"
   },
   "bin": {
     "ccr": "dist/cli.js"
