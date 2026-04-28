@@ -20,7 +20,7 @@ build:
     docker build -f packages/server/Dockerfile -t ccr:local .
 
 # Run production image with home-dir config mount (config.jsonc preferred over config.json)
-run: build
+local:run: build
     #!/usr/bin/env sh
     if [ -f ~/.claude-code-router/config.jsonc ]; then
         mount="-v ~/.claude-code-router/config.jsonc:/root/.claude-code-router/config.jsonc"
@@ -81,7 +81,7 @@ _check-config:
 
 # Run as a local router proxy. Requires config.jsonc (or config.json) and .env to exist.
 # Run `just setup` first if you haven't already.
-proxy: _check-config build
+local:proxy: _check-config build
     #!/usr/bin/env sh
     if [ -f config.jsonc ]; then
         cfg=config.jsonc

@@ -67,10 +67,12 @@ OPENROUTER_API_KEY=sk-or-...
 ### Step 3 — Start the proxy
 
 ```shell
-just proxy
+just local:proxy
 ```
 
-Builds the Docker image and starts the router on port 3456 with `--env-file .env`.
+Builds the Docker image and starts the router on port 3456, mounting the project-local `config.jsonc` and loading secrets from `.env`.
+
+**Already have `~/.claude-code-router/config.*` from an existing CCR install?** Use `just local:run` instead — it mounts your home-dir config directly so you don't need a project-level `config.jsonc` or `.env`.
 
 ### Step 4 — Configure your shell
 
