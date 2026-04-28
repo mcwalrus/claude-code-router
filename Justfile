@@ -82,7 +82,7 @@ _check-config:
 
 # Run as a local router proxy. Requires config.jsonc (or config.json) and .env to exist.
 # Run `just setup` then `just build` first if you haven't already.
-# Starts detached, polls /health, and prints container/URL/status.
+# Starts detached, polls /health, checks auth, and warns on shell env mismatch.
 local-proxy: _check-config
     #!/usr/bin/env sh
     if ! docker image inspect ccr:local >/dev/null 2>&1; then
@@ -108,16 +108,44 @@ local-proxy: _check-config
         i=$((i+1))
     done
     echo ""
-    if curl -sf http://127.0.0.1:3456/health >/dev/null 2>&1; then
-        cid=$(docker ps -q --filter name=ccr-local-proxy)
-        echo "Container: ${cid}  (ccr-local-proxy)"
-        echo "URL:       http://127.0.0.1:3456"
-        echo "Status:    OK"
-    else
-        echo "Proxy failed to start. Logs:"
+    if ! curl -sf http://127.0.0.1:3456/health >/dev/null 2>&1; then
+        echo "Health:    FAIL"
         docker logs ccr-local-proxy --tail 20
         docker rm -f ccr-local-proxy >/dev/null 2>&1
         exit 1
+    fi
+    cid=$(docker ps -q --filter name=ccr-local-proxy)
+    echo "Container: ${cid}  (ccr-local-proxy)"
+    echo "URL:       http://127.0.0.1:3456"
+    echo "Health:    OK"
+    # Auth probe: hit a non-existent route with the config's APIKEY.
+    # 404 = config loaded and auth accepted. 401 = config not being read.
+    apikey=$(jq -r '.APIKEY // empty' "${cfg}" 2>/dev/null)
+    if [ -n "$apikey" ]; then
+        auth_code=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "x-api-key: ${apikey}" \
+            http://127.0.0.1:3456/v1/probe)
+        if [ "$auth_code" = "404" ]; then
+            echo "Auth:      OK"
+        else
+            echo "Auth:      FAIL (HTTP ${auth_code} — config may not be loaded)"
+            docker logs ccr-local-proxy --tail 10
+            exit 1
+        fi
+    else
+        echo "Auth:      SKIP (no APIKEY in ${cfg})"
+    fi
+    # Warn if the shell env doesn't match — Claude Code will get 401s
+    if [ -n "$apikey" ]; then
+        if [ -z "${ANTHROPIC_AUTH_TOKEN}" ]; then
+            echo ""
+            echo "Note: shell not configured — run: just shell-setup"
+        elif [ "${ANTHROPIC_AUTH_TOKEN}" != "${apikey}" ]; then
+            echo ""
+            echo "Warning: ANTHROPIC_AUTH_TOKEN does not match proxy APIKEY"
+            echo "         Claude Code requests will be rejected (401)"
+            echo "         Fix: just shell-setup"
+        fi
     fi
 
 # Stop the local proxy container started by local-proxy
