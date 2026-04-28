@@ -67,6 +67,13 @@ setup target="":
 shell-setup:
     @bash scripts/shell-setup.sh
 
+# Add the repo's ./bin directory to PATH in shell rc files so `ccr`
+# resolves to the local v3.0.0 build instead of the stale global install.
+# Idempotent — safe to run multiple times.
+dev-setup:
+    @bash scripts/dev-setup.sh
+
+
 # Validate config.jsonc (or config.json): parse JSON/JSONC, check required fields,
 # verify provider/router references are consistent, and expand env var placeholders.
 validate-config:
