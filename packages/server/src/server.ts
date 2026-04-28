@@ -32,6 +32,24 @@ export const createServer = async (config: any): Promise<any> => {
   const server = new Server(config);
   const app = server.app;
 
+  // Multi-router support via x-ccr-route header.
+  // Routers is a map of named Router configs; "default" key is required.
+  // If Routers is present, Router is ignored.
+  const routers = config.Routers as Record<string, Record<string, string>> | undefined;
+  if (routers !== undefined) {
+    if (!routers.default) {
+      throw new Error('Config error: Routers requires a "default" key');
+    }
+    app.addHook('preHandler', async (req: any, _reply: any) => {
+      if (req.method !== 'POST' || req.url !== '/v1/messages') return;
+      const routeKey = (req.headers['x-ccr-route'] as string | undefined) ?? 'default';
+      const selectedRouter = routers[routeKey] ?? routers.default;
+      if (selectedRouter.default) {
+        req.body = { ...req.body, model: selectedRouter.default };
+      }
+    });
+  }
+
   app.register(fastifyMultipart, {
     limits: {
       fileSize: 50 * 1024 * 1024, // 50MB

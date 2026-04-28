@@ -453,6 +453,35 @@ The `Router` object defines which model to use for different scenarios:
 `/model provider_name,model_name`
 Example: `/model openrouter,anthropic/claude-3.5-sonnet`
 
+#### Routers (header-based multi-router)
+
+Use `Routers` instead of `Router` to select a named router config via the `x-ccr-route` HTTP header. Each key is a named router profile; the `"default"` key is **required** and is used when the header is absent or the named key is not found.
+
+When `Routers` is present, `Router` is ignored.
+
+```json
+{
+  "Routers": {
+    "default": {
+      "default": "anthropic,claude-sonnet-4-5",
+      "background": "groq,llama-3.1-8b-instant",
+      "think": "openrouter,anthropic/claude-opus-4"
+    },
+    "fast": {
+      "default": "groq,llama-3.1-8b-instant"
+    },
+    "powerful": {
+      "default": "openrouter,anthropic/claude-opus-4",
+      "think": "openrouter,anthropic/claude-opus-4"
+    }
+  }
+}
+```
+
+Send `x-ccr-route: fast` to route to the `fast` profile. Omit the header to use `default`. If the header value does not match any key, `default` is used as a fallback.
+
+> **Note:** `Routers` requires a `"default"` key. The server will refuse to start if it is missing.
+
 #### Custom Router
 
 For more advanced routing logic, you can specify a custom router script via the `CUSTOM_ROUTER_PATH` in your `config.json`. This allows you to implement complex routing rules beyond the default scenarios.
