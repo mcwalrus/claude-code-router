@@ -56,7 +56,7 @@ export class ImageAgent implements IAgent {
   }
 
   shouldHandle(req: any, config: any): boolean {
-    if (!config.Router.image || req.body.model === config.Router.image)
+    if (!config.Router?.image || req.body.model === config.Router.image)
       return false;
     const lastMessage = req.body.messages[req.body.messages.length - 1];
     if (
@@ -70,7 +70,7 @@ export class ImageAgent implements IAgent {
             item.content.some((sub: any) => sub.type === "image"))
       )
     ) {
-      req.body.model = config.Router.image;
+      req.body.model = config.Router?.image;
       const images: any[] = [];
       lastMessage.content
         .filter((item: any) => item.type === "tool_result")
@@ -209,7 +209,7 @@ export class ImageAgent implements IAgent {
               "content-type": "application/json",
             },
             body: JSON.stringify({
-              model: context.config.Router.image,
+              model: context.config.Router?.image,
               system: [
                 {
                   type: "text",

@@ -24,7 +24,7 @@ build:
 local-run: build
     #!/usr/bin/env sh
     if [ -f ~/.claude-code-router/config.jsonc ]; then
-        mount="-v ~/.claude-code-router/config.jsonc:/root/.claude-code-router/config.jsonc"
+        mount="-v ~/.claude-code-router/config.jsonc:/root/.claude-code-router/config.json"
     else
         mount="-v ~/.claude-code-router/config.json:/root/.claude-code-router/config.json"
     fi
@@ -96,7 +96,7 @@ local-proxy: _check-config
         -p 3456:3456 \
         -e NODE_ENV=production \
         --env-file .env \
-        -v "$(pwd)/${cfg}:/root/.claude-code-router/config.jsonc:ro" \
+        -v "$(pwd)/${cfg}:/root/.claude-code-router/config.json:ro" \
         ccr:local \
         node /app/packages/server/dist/index.js >/dev/null
     printf "Starting"
@@ -165,7 +165,7 @@ dev config="gemini-2.5":
     docker run -it --rm \
         -p 3456:3456 \
         --env-file .env \
-        -v "$(pwd)/${cfg}:/root/.claude-code-router/config.jsonc:ro" \
+        -v "$(pwd)/${cfg}:/root/.claude-code-router/config.json:ro" \
         ccr:local
 
 # List available dev configs
