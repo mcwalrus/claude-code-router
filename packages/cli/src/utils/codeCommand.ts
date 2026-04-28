@@ -81,9 +81,29 @@ export async function executeCodeCommand(
     }
   }
 
-  const settingsFile = await getSettingsPath(`${JSON.stringify(settingsFlag)}`)
-
-  args.push('--settings', settingsFile);
+  // If --settings already appears in args (e.g. passed by the caller), merge it
+  // into settingsFlag and replace the value in-place to avoid duplicate flags.
+  const existingSettingsIdx = args.indexOf('--settings');
+  if (existingSettingsIdx >= 0) {
+    try {
+      const parsedExisting = JSON.parse(args[existingSettingsIdx + 1]);
+      settingsFlag = {
+        ...settingsFlag,
+        ...parsedExisting,
+        env: {
+          ...settingsFlag.env,
+          ...parsedExisting.env,
+        } as ClaudeSettingsFlag['env']
+      };
+    } catch (error) {
+      console.error(`Failed to parse --settings argument: ${args[existingSettingsIdx + 1]}`, error);
+    }
+    const settingsFile = await getSettingsPath(`${JSON.stringify(settingsFlag)}`);
+    args[existingSettingsIdx + 1] = settingsFile;
+  } else {
+    const settingsFile = await getSettingsPath(`${JSON.stringify(settingsFlag)}`);
+    args.push('--settings', settingsFile);
+  }
 
   // Increment reference count when command starts
   incrementReferenceCount();
