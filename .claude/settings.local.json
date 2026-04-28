@@ -40,7 +40,9 @@
       "Bash(docker build *)",
       "Bash(just *)",
       "Bash(docker exec *)",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "Bash(cp /Users/max.collier/Projects/Max/claude-code/claude-code-router/docs/model-discovery-gap-analysis.md /Users/max.collier/Projects/Max/sandbox/claude-code-router/docs/)",
+      "Bash(mkdir -p /Users/max.collier/Projects/Max/sandbox/claude-code-router/docs/)"
     ]
   },
   "lsp": [
