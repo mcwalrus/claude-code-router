@@ -48,10 +48,9 @@
       "Bash(bun create *)",
       "Bash(./bin/ccr *)",
       "Bash(sh bin/ccr --version)",
-      "Bash(ccr -v)",
-      "Bash(chmod +x *)",
-      "Bash(bash *)",
-      "Bash(node *)"
+      "mcp__github__get_file_contents",
+      "mcp__github__list_commits",
+      "Bash(bd list *)"
     ]
   },
   "lsp": [
