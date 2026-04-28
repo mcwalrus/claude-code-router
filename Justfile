@@ -67,6 +67,55 @@ setup target="":
 shell-setup:
     @bash scripts/shell-setup.sh
 
+# Validate config.jsonc (or config.json): parse JSON/JSONC, check required fields,
+# verify provider/router references are consistent, and expand env var placeholders.
+validate-config:
+    #!/usr/bin/env sh
+    if [ -f config.jsonc ]; then cfg=config.jsonc; elif [ -f config.json ]; then cfg=config.json; else
+        echo "Error: no config file found. Run 'just setup' first."; exit 1
+    fi
+    node -e "
+      const { parse, printParseErrorCode } = require('./packages/shared/node_modules/jsonc-parser/lib/umd/main');
+      const fs = require('fs');
+      const raw = fs.readFileSync('$cfg', 'utf8');
+      const errors = [];
+      const cfg = parse(raw, errors);
+      if (errors.length) {
+        errors.forEach(e => console.error('Parse error at offset ' + e.offset + ': ' + printParseErrorCode(e.error)));
+        process.exit(1);
+      }
+      const problems = [];
+      if (!cfg.APIKEY)   problems.push('Missing required field: APIKEY');
+      if (!cfg.PORT)     problems.push('Missing required field: PORT');
+      if (!cfg.Providers || !Array.isArray(cfg.Providers) || cfg.Providers.length === 0)
+        problems.push('Missing or empty Providers array');
+      if (!cfg.Router)   problems.push('Missing Router object');
+      const providerNames = new Set((cfg.Providers || []).map(p => p.name));
+      const allModels = {};
+      (cfg.Providers || []).forEach(p => (p.models || []).forEach(m => allModels[m] = p.name));
+      const routerFields = ['default','background','think','longContext','webSearch','image'];
+      (routerFields).forEach(field => {
+        const val = cfg.Router && cfg.Router[field];
+        if (!val) return;
+        const [prov, model] = val.split(',');
+        if (!providerNames.has(prov))
+          problems.push('Router.' + field + ' references unknown provider \"' + prov + '\"');
+        else if (model && !allModels[model])
+          problems.push('Router.' + field + ' references unknown model \"' + model + '\" (not listed under provider \"' + prov + '\")');
+      });
+      const envVarRefs = [];
+      JSON.stringify(cfg).replace(/\\\$\{?([A-Z_][A-Z0-9_]*)\}?/g, (_, v) => envVarRefs.push(v));
+      const missing = envVarRefs.filter(v => !process.env[v]);
+      if (problems.length) {
+        problems.forEach(p => console.error('  ✗ ' + p));
+        process.exit(1);
+      }
+      console.log('✓ ' + '$cfg' + ' is valid');
+      console.log('  Providers: ' + (cfg.Providers || []).map(p => p.name).join(', '));
+      console.log('  Router.default: ' + (cfg.Router && cfg.Router.default || '(not set)'));
+      if (missing.length) console.log('  Note: unset env vars referenced in config: ' + missing.join(', '));
+    " 2>&1
+
 # Internal: verify config.jsonc (or config.json) and .env exist before running
 [private]
 _check-config:
