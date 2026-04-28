@@ -15,7 +15,8 @@
       "Bash(pnpm dev:cli)",
       "Bash(pnpm install)",
       "Bash(pnpm exec tsc --noEmit*)",
-      "Bash(claude install *)"
+      "Bash(claude install *)",
+      "Bash(git *)"
     ]
   },
   "lsp": [
