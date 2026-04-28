@@ -1,5 +1,8 @@
 node_modules
 .env
+
+# Local dev proxy configs (contain API keys)
+config/*.json
 log.txt
 .idea
 dist
