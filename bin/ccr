@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+CLI_JS="${REPO_ROOT}/packages/cli/dist/cli.js"
+
+if [ ! -f "$CLI_JS" ]; then
+    echo "Error: CLI not built. Run: pnpm build" >&2
+    exit 1
+fi
+
+exec node "$CLI_JS" "$@"
