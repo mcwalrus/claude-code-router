@@ -47,7 +47,9 @@
       "mcp__github__get_me",
       "Bash(bun create *)",
       "Bash(./bin/ccr *)",
-      "Bash(sh bin/ccr --version)"
+      "Bash(sh bin/ccr --version)",
+      "mcp__github__get_file_contents",
+      "mcp__github__list_commits"
     ]
   },
   "lsp": [
