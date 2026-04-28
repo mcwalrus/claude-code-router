@@ -21,7 +21,9 @@
     "dev:ui": "pnpm --filter @CCR/ui dev",
     "dev:core": "pnpm --filter @musistudio/llms dev",
     "dev:docs": "pnpm --filter claude-code-router-docs start",
-    "serve:docs": "pnpm --filter claude-code-router-docs serve"
+    "serve:docs": "pnpm --filter claude-code-router-docs serve",
+    "test": "pnpm --filter @CCR/server test",
+    "ci": "pnpm build:shared && pnpm build:core && pnpm test"
   },
   "bin": {
     "ccr": "dist/cli.js"
