@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "claude_code_router",
+  "project_id": "fad2d939-781d-4bf5-9066-857f5e8fa6bb"
+}
