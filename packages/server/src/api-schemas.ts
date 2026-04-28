@@ -183,6 +183,32 @@ export const apiSchemas = {
     params: { type: "object", properties: { name: { type: "string" } } },
     response: { 200: successResponse },
   },
+  // Interactive
+  interactiveChoice: {
+    summary: "Choose model for interactive session",
+    tags: ["Interactive"],
+    body: {
+      type: "object",
+      required: ["sessionId", "model"],
+      properties: {
+        sessionId: { type: "string", description: "Session ID awaiting model choice" },
+        model: { type: "string", description: "Selected provider,model string" },
+      },
+    },
+    response: {
+      200: { type: "object", properties: { success: { type: "boolean" }, sessionId: { type: "string" }, model: { type: "string" } } },
+      400: { type: "object", properties: { error: { type: "string" } } },
+      404: { type: "object", properties: { error: { type: "string" } } },
+    },
+  },
+  interactiveSessions: {
+    summary: "List sessions awaiting model choice",
+    tags: ["Interactive"],
+    response: {
+      200: { type: "object", properties: { sessions: { type: "array", items: { type: "object", additionalProperties: true } } } },
+    },
+  },
+
   presetsInstallGithub: {
     summary: "Install preset from GitHub marketplace",
     tags: ["Presets"],

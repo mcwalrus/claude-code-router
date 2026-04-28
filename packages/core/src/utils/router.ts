@@ -205,7 +205,53 @@ export interface RouterContext {
   event?: any;
 }
 
-export type RouterScenarioType = 'default' | 'background' | 'think' | 'longContext' | 'webSearch';
+export type RouterScenarioType = 'default' | 'background' | 'think' | 'longContext' | 'webSearch' | 'interactive';
+
+// Session-scoped model choices for interactive routing mode
+const sessionModelChoices = new Map<string, string>();
+const sessionsAwaitingChoice = new Map<string, { req: any; res: any; context: RouterContext }>();
+
+export function setSessionModelChoice(sessionId: string, model: string): void {
+  sessionModelChoices.set(sessionId, model);
+  const pending = sessionsAwaitingChoice.get(sessionId);
+  if (pending) {
+    sessionsAwaitingChoice.delete(sessionId);
+  }
+}
+
+export function getSessionModelChoice(sessionId: string): string | undefined {
+  return sessionModelChoices.get(sessionId);
+}
+
+export function isSessionAwaitingChoice(sessionId: string): boolean {
+  return sessionsAwaitingChoice.has(sessionId);
+}
+
+export function getPendingSessionChoice(sessionId: string): { req: any; res: any; context: RouterContext } | undefined {
+  return sessionsAwaitingChoice.get(sessionId);
+}
+
+export function clearSessionChoice(sessionId: string): void {
+  sessionModelChoices.delete(sessionId);
+  sessionsAwaitingChoice.delete(sessionId);
+}
+
+export function getInteractiveSessionsInfo(): { sessionId: string; scenario: string; availableModels: string[] }[] {
+  const info: { sessionId: string; scenario: string; availableModels: string[] }[] = [];
+  for (const [sessionId, { req, context }] of sessionsAwaitingChoice.entries()) {
+    info.push({
+      sessionId,
+      scenario: req.scenarioType || 'default',
+      availableModels: context.configService.get<string[]>('interactiveModels') || [],
+    });
+  }
+  return info;
+}
+
+export function getAllSessionChoices(): Map<string, string> {
+  // Return a copy to prevent external mutation
+  return new Map(sessionModelChoices);
+}
 
 export interface RouterLogEntry {
   timestamp: string;
@@ -247,6 +293,55 @@ export const router = async (req: any, _res: any, context: RouterContext) => {
       req.sessionId = parts[1];
     }
   }
+
+  const isInteractive = configService.get<boolean>("interactive") || process.env.CCR_INTERACTIVE === "true";
+  if (isInteractive && req.sessionId) {
+    const chosen = sessionModelChoices.get(req.sessionId);
+    if (chosen) {
+      req.scenarioType = "interactive";
+      req.body.model = chosen;
+      return;
+    }
+    // If we are already awaiting a choice for this session, don't re-buffer
+    if (!sessionsAwaitingChoice.has(req.sessionId)) {
+      // We need to buffer this request; the original auto-detected scenario will
+      // be resolved lazily after the user picks a model. For now compute tokens
+      // and scenario so the UI can present options.
+      const { messages, system = [], tools }: MessageCreateParamsBase = req.body;
+
+      try {
+        const [providerName, modelName] = req.body.model.split(",");
+        const tokenizerConfig = context.tokenizerService?.getTokenizerConfigForModel(
+          providerName,
+          modelName
+        );
+
+        let tokenCount: number;
+        if (context.tokenizerService) {
+          const result = await context.tokenizerService.countTokens(
+            { messages: messages as MessageParam[], system, tools: tools as Tool[] },
+            tokenizerConfig
+          );
+          tokenCount = result.tokenCount;
+        } else {
+          tokenCount = calculateTokenCount(
+            messages as MessageParam[],
+            system,
+            tools as Tool[]
+          );
+        }
+
+        const detected = await getUseModel(req, tokenCount, configService, sessionUsageCache.get(req.sessionId));
+        req.scenarioType = detected.scenarioType;
+      } catch {
+        req.scenarioType = "default";
+      }
+
+      sessionsAwaitingChoice.set(req.sessionId, { req, res: _res, context });
+      return;
+    }
+  }
+
   const lastMessageUsage = sessionUsageCache.get(req.sessionId);
   const { messages, system = [], tools }: MessageCreateParamsBase = req.body;
   const rewritePrompt = configService.get("REWRITE_SYSTEM_PROMPT");

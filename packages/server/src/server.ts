@@ -492,6 +492,28 @@ export const createServer = async (config: any): Promise<any> => {
     });
   }
 
+  // === Interactive Routing Endpoints ===
+  app.get("/api/interactive/sessions", { schema: apiSchemas.interactiveSessions }, async () => {
+    return { sessions: (app as any).interactiveSessions || [] };
+  });
+
+  app.post("/api/interactive/choose", { schema: apiSchemas.interactiveChoice }, async (req: any, reply: any) => {
+    const { sessionId, model } = req.body;
+    if (!sessionId || !model) {
+      return reply.status(400).send({ error: "Missing sessionId or model" });
+    }
+    const isAwaiting = (app as any).interactiveSessions?.find((s: any) => s.sessionId === sessionId);
+    if (!isAwaiting) {
+      return reply.status(404).send({ error: "Session is not awaiting a model choice" });
+    }
+    // Store choice in app-level map (mirrors router sessionModelChoices)
+    if (!(app as any).sessionModelChoices) {
+      (app as any).sessionModelChoices = new Map();
+    }
+    (app as any).sessionModelChoices.set(sessionId, model);
+    return { success: true, sessionId, model };
+  });
+
   // Helper function: Load preset from ZIP
   async function loadPresetFromZip(zipFile: string): Promise<PresetFile> {
     const zip = new AdmZip(zipFile);

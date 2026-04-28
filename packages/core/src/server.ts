@@ -268,6 +268,7 @@ export { router };
 export { calculateTokenCount };
 export { searchProjectBySession };
 export { getRouterLogBuffer } from "./utils/router";
+export { setSessionModelChoice, getSessionModelChoice, isSessionAwaitingChoice, getInteractiveSessionsInfo, clearSessionChoice, getAllSessionChoices } from "./utils/router";
 export type { RouterScenarioType, RouterFallbackConfig, RouterLogEntry } from "./utils/router";
 export { ConfigService } from "./services/config";
 export { ProviderService } from "./services/provider";
