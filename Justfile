@@ -5,8 +5,9 @@
 test:
     pnpm test
 
-# Run full CI checks (tests + type checking)
+# Run full CI checks (justfile syntax + tests + type checking)
 ci:
+    just --list >/dev/null
     pnpm ci
 
 # Install git pre-commit hook (run once after cloning)
@@ -108,7 +109,7 @@ local-proxy: _check-config
     done
     echo ""
     if curl -sf http://127.0.0.1:3456/health >/dev/null 2>&1; then
-        cid=$(docker ps --filter name=ccr-local-proxy --format "{{.ID}}")
+        cid=$(docker ps -q --filter name=ccr-local-proxy)
         echo "Container: ${cid}  (ccr-local-proxy)"
         echo "URL:       http://127.0.0.1:3456"
         echo "Status:    OK"
