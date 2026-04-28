@@ -3,6 +3,7 @@
   "version": "2.0.0",
   "description": "Use Claude Code without an Anthropics account and route it to another LLM provider",
   "scripts": {
+    "test": "vitest run",
     "build": "pnpm build:shared && pnpm build:core && pnpm build:server && pnpm build:cli && pnpm build:ui",
     "build:core": "pnpm --filter @musistudio/llms build",
     "build:shared": "pnpm --filter @CCR/shared build",
@@ -34,9 +35,11 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^24.0.15",
+    "@vitest/coverage-v8": "^4.1.5",
     "esbuild": "^0.25.1",
     "shx": "^0.4.0",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^4.1.5"
   },
   "pnpm": {
     "overrides": {

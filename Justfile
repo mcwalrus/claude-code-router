@@ -1,6 +1,16 @@
 # CCR local Docker commands
 # Copy .env.example to .env and fill in your API keys before running
 
+# Run unit tests
+test:
+    pnpm test
+
+# Install git pre-commit hook (run once after cloning)
+install-hooks:
+    cp scripts/hooks/pre-commit .git/hooks/pre-commit
+    chmod +x .git/hooks/pre-commit
+    @echo "pre-commit hook installed"
+
 build:
     pnpm build
     docker build -f packages/server/Dockerfile -t ccr:local .
