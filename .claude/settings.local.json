@@ -1,11 +1,4 @@
 {
-  "lsp": [
-    {
-      "name": "typescript",
-      "command": "typescript-language-server",
-      "args": ["--stdio"]
-    }
-  ],
   "permissions": {
     "allow": [
       "Bash(command -v typescript-language-server)",
@@ -21,7 +14,17 @@
       "Bash(pnpm dev:server)",
       "Bash(pnpm dev:cli)",
       "Bash(pnpm install)",
-      "Bash(pnpm exec tsc --noEmit*)"
+      "Bash(pnpm exec tsc --noEmit*)",
+      "Bash(claude install *)"
     ]
-  }
+  },
+  "lsp": [
+    {
+      "name": "typescript",
+      "command": "typescript-language-server",
+      "args": [
+        "--stdio"
+      ]
+    }
+  ]
 }
