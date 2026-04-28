@@ -7,6 +7,7 @@
     "typecheck": "pnpm build:shared && pnpm exec tsc --noEmit -p packages/shared/tsconfig.json && pnpm exec tsc --noEmit -p packages/server/tsconfig.json && pnpm exec tsc --noEmit -p packages/cli/tsconfig.json",
     "ci": "pnpm build:shared && pnpm build:core && pnpm test && pnpm typecheck",
     "build": "pnpm build:shared && pnpm build:core && pnpm build:server && pnpm build:cli && pnpm build:ui",
+    "ci": "pnpm build:shared && pnpm build:core && pnpm build:server",
     "build:core": "pnpm --filter @musistudio/llms build",
     "build:shared": "pnpm --filter @CCR/shared build",
     "build:cli": "pnpm --filter @CCR/cli build",

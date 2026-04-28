@@ -207,6 +207,29 @@ export interface RouterContext {
 
 export type RouterScenarioType = 'default' | 'background' | 'think' | 'longContext' | 'webSearch';
 
+export interface RouterLogEntry {
+  timestamp: string;
+  requestId: string;
+  sessionId?: string;
+  model: string;
+  scenario: RouterScenarioType;
+  tokenCount: number;
+}
+
+const MAX_ROUTER_LOG_ENTRIES = 100;
+const routerLogBuffer: RouterLogEntry[] = [];
+
+export function getRouterLogBuffer(): RouterLogEntry[] {
+  return routerLogBuffer;
+}
+
+function pushRouterLog(entry: RouterLogEntry) {
+  if (routerLogBuffer.length >= MAX_ROUTER_LOG_ENTRIES) {
+    routerLogBuffer.shift();
+  }
+  routerLogBuffer.push(entry);
+}
+
 export interface RouterFallbackConfig {
   default?: string[];
   background?: string[];
@@ -288,6 +311,16 @@ export const router = async (req: any, _res: any, context: RouterContext) => {
       req.scenarioType = 'default';
     }
     req.body.model = model;
+    if (process.env.DEBUG_ROUTER === 'true') {
+      pushRouterLog({
+        timestamp: new Date().toISOString(),
+        requestId: req.id,
+        sessionId: req.sessionId,
+        model: req.body.model,
+        scenario: req.scenarioType || 'default',
+        tokenCount,
+      });
+    }
   } catch (error: any) {
     req.log.error(`Error in router middleware: ${error.message}`);
     const Router = configService.get("Router");

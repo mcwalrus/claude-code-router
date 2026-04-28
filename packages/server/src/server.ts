@@ -1,4 +1,4 @@
-import Server, { calculateTokenCount, TokenizerService } from "@musistudio/llms";
+import Server, { calculateTokenCount, TokenizerService, getRouterLogBuffer } from "@musistudio/llms";
 import { readConfigFile, writeConfigFile, backupConfigFile } from "./utils";
 import { join } from "path";
 import fastifyStatic from "@fastify/static";
@@ -467,6 +467,30 @@ export const createServer = async (config: any): Promise<any> => {
       reply.status(500).send({ error: error.message || "Failed to install preset from GitHub" });
     }
   });
+
+  if (process.env.DEBUG_ROUTER === 'true') {
+    app.get("/api/debug/router-logs", async (req: any, reply: any) => {
+      const user = process.env.DEBUG_ROUTER_USER;
+      const pass = process.env.DEBUG_ROUTER_PASS;
+      if (user && pass) {
+        const authHeader = (req.headers.authorization as string) || '';
+        const [scheme, encoded] = authHeader.split(' ');
+        if (scheme !== 'Basic' || !encoded) {
+          reply.header('WWW-Authenticate', 'Basic realm="CCR Debug"');
+          return reply.status(401).send({ error: 'Authentication required' });
+        }
+        const decoded = Buffer.from(encoded, 'base64').toString();
+        const colonIdx = decoded.indexOf(':');
+        const reqUser = decoded.slice(0, colonIdx);
+        const reqPass = decoded.slice(colonIdx + 1);
+        if (reqUser !== user || reqPass !== pass) {
+          reply.header('WWW-Authenticate', 'Basic realm="CCR Debug"');
+          return reply.status(401).send({ error: 'Invalid credentials' });
+        }
+      }
+      return { entries: getRouterLogBuffer() };
+    });
+  }
 
   // Helper function: Load preset from ZIP
   async function loadPresetFromZip(zipFile: string): Promise<PresetFile> {

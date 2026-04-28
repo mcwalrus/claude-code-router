@@ -132,6 +132,24 @@ The `config.json` file has several key sections:
   - **Server-level logs**: HTTP requests, API calls, and server events are logged using pino in the `~/.claude-code-router/logs/` directory with filenames like `ccr-*.log`
   - **Application-level logs**: Routing decisions and business logic events are logged in `~/.claude-code-router/claude-code-router.log`
 - **`APIKEY`** (optional): You can set a secret key to authenticate requests. When set, clients must provide this key in the `Authorization` header (e.g., `Bearer your-secret-key`) or the `x-api-key` header. Example: `"APIKEY": "your-secret-key"`.
+
+#### Router Debug Endpoint
+
+For local development, you can expose an in-memory log of recent routing decisions via a debug API endpoint.
+
+Set the `DEBUG_ROUTER=true` environment variable to enable it. The endpoint `GET /api/debug/router-logs` will return the last 100 routing decisions, each containing `timestamp`, `requestId`, `sessionId`, `model`, `scenario`, and `tokenCount`.
+
+To protect the endpoint with HTTP Basic Auth, also set `DEBUG_ROUTER_USER` and `DEBUG_ROUTER_PASS`. If these are not set, the endpoint is unprotected.
+
+```bash
+DEBUG_ROUTER=true DEBUG_ROUTER_USER=dev DEBUG_ROUTER_PASS=secret ccr start
+```
+
+```bash
+curl -u dev:secret http://localhost:3456/api/debug/router-logs
+```
+
+> **Note**: This endpoint is intended for local development only. Do not enable it in shared or production environments.
 - **`HOST`** (optional): You can set the host address for the server. If `APIKEY` is not set, the host will be forced to `127.0.0.1` for security reasons to prevent unauthorized access. Example: `"HOST": "0.0.0.0"`.
 - **`NON_INTERACTIVE_MODE`** (optional): When set to `true`, enables compatibility with non-interactive environments like GitHub Actions, Docker containers, or other CI/CD systems. This sets appropriate environment variables (`CI=true`, `FORCE_COLOR=0`, etc.) and configures stdin handling to prevent the process from hanging in automated environments. Example: `"NON_INTERACTIVE_MODE": true`.
 
