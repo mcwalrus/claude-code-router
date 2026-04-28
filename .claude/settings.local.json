@@ -1,0 +1,27 @@
+{
+  "lsp": [
+    {
+      "name": "typescript",
+      "command": "typescript-language-server",
+      "args": ["--stdio"]
+    }
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(command -v typescript-language-server)",
+      "Bash(command -v serena)",
+      "Bash(claude mcp *)",
+      "Bash(command -v node)",
+      "Bash(pnpm build)",
+      "Bash(pnpm build:server)",
+      "Bash(pnpm build:cli)",
+      "Bash(pnpm build:shared)",
+      "Bash(pnpm build:core)",
+      "Bash(pnpm build:ui)",
+      "Bash(pnpm dev:server)",
+      "Bash(pnpm dev:cli)",
+      "Bash(pnpm install)",
+      "Bash(pnpm exec tsc --noEmit*)"
+    ]
+  }
+}
