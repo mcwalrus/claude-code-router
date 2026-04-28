@@ -84,6 +84,9 @@ importers:
       '@inquirer/prompts':
         specifier: ^5.0.0
         version: 5.5.0
+      '@types/adm-zip':
+        specifier: ^0.5.7
+        version: 0.5.7
       '@types/archiver':
         specifier: ^7.0.0
         version: 7.0.0

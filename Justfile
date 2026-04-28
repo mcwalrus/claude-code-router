@@ -5,6 +5,10 @@
 test:
     pnpm test
 
+# Run full CI checks (tests + type checking)
+ci:
+    pnpm ci
+
 # Install git pre-commit hook (run once after cloning)
 install-hooks:
     cp scripts/hooks/pre-commit .git/hooks/pre-commit

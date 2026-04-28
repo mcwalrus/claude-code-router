@@ -21,6 +21,7 @@
     "@CCR/server": "workspace:*",
     "@CCR/shared": "workspace:*",
     "@inquirer/prompts": "^5.0.0",
+    "@types/adm-zip": "^0.5.7",
     "@types/archiver": "^7.0.0",
     "@types/node": "^24.0.15",
     "adm-zip": "^0.5.16",

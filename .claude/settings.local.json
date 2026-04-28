@@ -31,7 +31,9 @@
       "Bash(bd create *)",
       "Bash(pnpm add *)",
       "Bash(chmod +x scripts/hooks/pre-commit)",
-      "Bash(cp scripts/hooks/pre-commit /Users/max.collier/Projects/Max/sandbox/claude-code-router/.git/hooks/pre-commit)"
+      "Bash(cp scripts/hooks/pre-commit /Users/max.collier/Projects/Max/sandbox/claude-code-router/.git/hooks/pre-commit)",
+      "Bash(echo \"tsc_exit:$?\")",
+      "Bash(pnpm run *)"
     ]
   },
   "lsp": [
