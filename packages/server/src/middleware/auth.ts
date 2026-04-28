@@ -4,8 +4,9 @@ export const apiKeyAuth =
   (config: any) =>
   async (req: FastifyRequest, reply: FastifyReply, done: () => void) => {
     // Public endpoints that don't require authentication
+    const docsPath = process.env.CCR_DOCS_PATH || "/documentation";
     const publicPaths = ["/", "/health"];
-    if (publicPaths.includes(req.url) || req.url.startsWith("/ui")) {
+    if (publicPaths.includes(req.url) || req.url.startsWith("/ui") || req.url.startsWith(docsPath)) {
       return done();
     }
 

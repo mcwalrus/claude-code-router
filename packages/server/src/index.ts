@@ -200,6 +200,35 @@ async function getServer(options: RunOptions = {}) {
       apiKeyAuth(config)(req, reply, done).catch(reject);
     });
   });
+
+  // Basic auth for documentation endpoint (opt-in via env vars)
+  const docsPath = process.env.CCR_DOCS_PATH || "/documentation";
+  const docsAuthEnabled = process.env.CCR_DOCS_AUTH === "true";
+  const docsUser = process.env.CCR_DOCS_USER || "admin";
+  const docsPassword = process.env.CCR_DOCS_PASSWORD;
+
+  serverInstance.addHook("preHandler", async (req: any, reply: any) => {
+    if (!req.url.startsWith(docsPath)) return;
+    if (!docsAuthEnabled || !docsPassword) return;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Basic ")) {
+      reply.header("WWW-Authenticate", `Basic realm="CCR Documentation"`);
+      return reply.status(401).send("Unauthorized");
+    }
+
+    const decoded = Buffer.from(authHeader.slice(6), "base64").toString("utf-8");
+    const colonIdx = decoded.indexOf(":");
+    if (colonIdx === -1) {
+      reply.header("WWW-Authenticate", `Basic realm="CCR Documentation"`);
+      return reply.status(401).send("Unauthorized");
+    }
+
+    if (decoded.slice(0, colonIdx) !== docsUser || decoded.slice(colonIdx + 1) !== docsPassword) {
+      reply.header("WWW-Authenticate", `Basic realm="CCR Documentation"`);
+      return reply.status(401).send("Unauthorized");
+    }
+  });
   serverInstance.addHook("preHandler", async (req: any, reply: any) => {
     const url = new URL(`http://127.0.0.1${req.url}`);
     req.pathname = url.pathname;

@@ -1,6 +1,8 @@
 import Server, { calculateTokenCount, TokenizerService } from "@musistudio/llms";
 import { readConfigFile, writeConfigFile, backupConfigFile } from "./utils";
 import { join } from "path";
+import swagger from "@fastify/swagger";
+import swaggerUi from "@fastify/swagger-ui";
 import fastifyStatic from "@fastify/static";
 import { readdirSync, statSync, readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, rmSync } from "fs";
 import { homedir } from "os";
@@ -33,6 +35,32 @@ export const createServer = async (config: any): Promise<any> => {
     limits: {
       fileSize: 50 * 1024 * 1024, // 50MB
     },
+  });
+
+  const docsPath = process.env.CCR_DOCS_PATH || "/documentation";
+
+  app.register(swagger, {
+    openapi: {
+      info: {
+        title: "Claude Code Router API",
+        version: "1.0.0",
+        description: "REST API for managing Claude Code Router configuration, presets, and logs",
+      },
+      components: {
+        securitySchemes: {
+          apiKey: {
+            type: "apiKey",
+            in: "header",
+            name: "x-api-key",
+            description: "API key required when providers are configured",
+          },
+        },
+      },
+    },
+  });
+
+  app.register(swaggerUi, {
+    routePrefix: docsPath,
   });
 
   app.post("/v1/messages/count_tokens", async (req: any, reply: any) => {
