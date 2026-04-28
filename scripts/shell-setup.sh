@@ -80,11 +80,17 @@ if [ ${#RC_FILES[@]} -eq 0 ]; then
     echo "Created $HOME/.zshrc"
 fi
 
-# ── Write to each rc file ─────────────────────────────────────────────────────
+# ── Write to each rc file (replace existing block if present) ─────────────────
 configured=0
 for rc in "${RC_FILES[@]}"; do
     if grep -q "$MARKER" "$rc" 2>/dev/null; then
-        echo "Already configured in $(basename "$rc") — skipping."
+        # Remove the old block (marker line through the next blank line)
+        tmp=$(mktemp)
+        awk "/$MARKER/{found=1} found && /^$/{found=0; next} !found" "$rc" > "$tmp"
+        mv "$tmp" "$rc"
+        printf '\n%s\n' "$BLOCK" >> "$rc"
+        echo "✓ Updated proxy config in $rc"
+        configured=$((configured + 1))
     else
         printf '\n%s\n' "$BLOCK" >> "$rc"
         echo "✓ Added proxy config to $rc"
