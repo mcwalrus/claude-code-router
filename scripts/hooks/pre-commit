@@ -1,2 +1,4 @@
 #!/bin/sh
+set -e
+just --list >/dev/null
 pnpm run ci
