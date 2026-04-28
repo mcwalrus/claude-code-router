@@ -103,6 +103,19 @@ const RouterSchema = Type.Object(
   }
 );
 
+// Routers: named router profiles selected via x-ccr-route header.
+// "default" key is required; additional keys are named profiles.
+const RoutersSchema = Type.Object(
+  {
+    default: RouterSchema,
+  },
+  {
+    additionalProperties: RouterSchema,
+    description:
+      'Named router profiles selected via the x-ccr-route request header. The "default" key is required and used when the header is absent or the named profile is not found.',
+  }
+);
+
 const CustomTransformerPlugin = Type.Object({
   path: Type.String({
     description: "Absolute path to a transformer JS plugin file",
@@ -199,6 +212,7 @@ export const ConfigSchema = Type.Object(
       })
     ),
     Router: Type.Optional(RouterSchema),
+    Routers: Type.Optional(RoutersSchema),
     transformers: Type.Optional(
       Type.Array(CustomTransformerPlugin, {
         description: "External transformer plugin files loaded at startup",
