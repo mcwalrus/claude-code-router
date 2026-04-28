@@ -142,7 +142,8 @@ Create and configure your `~/.claude-code-router/config.json` file. For more det
 
 The `config.json` file has several key sections:
 
-- **`PROXY_URL`** (optional): You can set a proxy for API requests, for example: `"PROXY_URL": "http://127.0.0.1:7890"`.
+- **`PROXY_URL`** (optional): You can set a proxy for API requests, for example: `"PROXY_URL": "http://127.0.0.1:7890"`. This is an HTTP tunnel — it wraps the TCP connection to the upstream provider (useful for corporate proxies).
+- **`PROXY_HOP`** (optional): A label identifying this CCR instance in a proxy chain (e.g. `"edge"`, `"dmz"`, `"internal"`). When the metrics plugin is enabled, this value is added as the `hop` label to `ccr_provider_routes_total` and `ccr_tokens_total`, so you can track routing and token usage at every layer. See [Proxy Chains](docs/docs/server/advanced/proxy-chains.md) for a full walkthrough.
 - **`LOG`** (optional): You can enable logging by setting it to `true`. When set to `false`, no log files will be created. Default is `true`.
 - **`LOG_LEVEL`** (optional): Set the logging level. Available options are: `"fatal"`, `"error"`, `"warn"`, `"info"`, `"debug"`, `"trace"`. Default is `"debug"`.
 - **Logging Systems**: The Claude Code Router uses two separate logging systems:
