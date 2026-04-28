@@ -35,27 +35,69 @@ The fastest way to run Claude Code Router locally without installing Node.js dep
 
 **Prerequisites:** Docker, `just` (`brew install just`), and API keys for your chosen providers.
 
+### Step 1 — Copy templates
+
 ```shell
-# 1. Copy config and .env templates (run once)
 just setup
+```
 
-# 2. Edit the generated files:
-#    config.jsonc — set providers, models, router rules
-#    .env         — add your API keys (ANTHROPIC_API_KEY, OPENROUTER_API_KEY, etc.)
+Creates `config.jsonc` from `config.example.jsonc` and `.env` from `.env.example`. Both files are gitignored and never committed.
 
-# 3. Build the image and start the proxy on port 3456
+### Step 2 — Fill in your values
+
+**`config.jsonc`** — set your providers, router rules, and the `APIKEY` that protects the proxy:
+
+```jsonc
+{
+  "APIKEY": "my-local-secret",   // shared secret between Claude Code and the proxy
+  "HOST": "0.0.0.0",
+  "PORT": "3456",
+  "Providers": [ /* ... */ ],
+  "Router": { /* ... */ }
+}
+```
+
+**`.env`** — add the API keys referenced by `$VAR` placeholders in `config.jsonc`:
+
+```shell
+ANTHROPIC_API_KEY=sk-ant-...
+OPENROUTER_API_KEY=sk-or-...
+```
+
+### Step 3 — Start the proxy
+
+```shell
 just proxy
 ```
 
-`just setup` copies `config.example.jsonc` → `config.jsonc` and `.env.example` → `.env`. Both files are gitignored and will never be committed. API keys in `config.jsonc` are referenced via `$VAR` syntax and injected at startup from `.env`.
+Builds the Docker image and starts the router on port 3456 with `--env-file .env`.
 
-Once running, point Claude Code at the proxy:
+### Step 4 — Configure your shell
+
+To route all future Claude Code sessions through the proxy automatically:
 
 ```shell
-export ANTHROPIC_BASE_URL=http://127.0.0.1:3456
-export ANTHROPIC_AUTH_TOKEN=your-secret-key  # matches APIKEY in config.jsonc
-claude
+just setup local-proxy   # or: just shell-setup
 ```
+
+This reads `APIKEY` and `PORT` from `config.jsonc` and appends a guarded block to `~/.zshrc` and/or `~/.bashrc` / `~/.bash_profile` (idempotent — safe to run again):
+
+```shell
+# CCR: Claude Code Router local proxy
+export ANTHROPIC_AUTH_TOKEN="my-local-secret"
+export ANTHROPIC_BASE_URL="http://127.0.0.1:3456"
+export NO_PROXY="127.0.0.1"
+export DISABLE_TELEMETRY="true"
+export DISABLE_COST_WARNINGS="true"
+```
+
+Apply to the current session without reopening your terminal:
+
+```shell
+source ~/.zshrc   # or source ~/.bashrc
+```
+
+To undo, remove the block between `# CCR: Claude Code Router local proxy` and the next blank line from your shell config.
 
 ---
 

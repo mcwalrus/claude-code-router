@@ -31,7 +31,9 @@ run: build
 
 # First-time setup: copy config.example.jsonc → config.jsonc and .env.example → .env
 # Edit both files with your API keys before running `just proxy`.
-setup:
+# Usage: just setup              — copy templates only
+#        just setup local-proxy  — also configure shell env for all future sessions
+setup target="":
     #!/usr/bin/env sh
     if [ -f config.jsonc ] || [ -f config.json ]; then
         echo "Config already exists — skipping config copy."
@@ -49,7 +51,20 @@ setup:
     echo "Next steps:"
     echo "  1. Edit config.jsonc — set your providers, models, and router rules"
     echo "  2. Edit .env        — add your API keys (ANTHROPIC_API_KEY, etc.)"
-    echo "  3. Run: just proxy"
+    if [ "{{target}}" = "local-proxy" ]; then
+        echo ""
+        bash scripts/shell-setup.sh
+    else
+        echo "  3. Run: just proxy"
+        echo ""
+        echo "  To also configure your shell env for future sessions:"
+        echo "    just setup local-proxy   (or: just shell-setup)"
+    fi
+
+# Configure your shell (~/.zshrc / ~/.bashrc) to route Claude Code through the
+# local proxy. Reads APIKEY and PORT from config.jsonc. Idempotent.
+shell-setup:
+    @bash scripts/shell-setup.sh
 
 # Internal: verify config.jsonc (or config.json) and .env exist before running
 [private]
