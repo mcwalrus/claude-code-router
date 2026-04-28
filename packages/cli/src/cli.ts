@@ -46,7 +46,8 @@ const HELP_TEXT = `
 Usage: ccr [command] [preset-name]
 
 Commands:
-  start         Start server
+  start                  Start server (daemonizes by default)
+  start --foreground     Start server in foreground (for launchd/systemd)
   stop          Stop server
   restart       Restart server
   status        Show server status
@@ -172,7 +173,7 @@ async function main() {
       if (shouldStartServer && !isRunning) {
         console.log("Service not running, starting service...");
         const cliPath = join(__dirname, "cli.js");
-        const startProcess = spawn("node", [cliPath, "start"], {
+        const startProcess = spawn("node", [cliPath, "start", "--foreground"], {
           detached: true,
           stdio: "ignore",
         });
@@ -210,7 +211,34 @@ async function main() {
 
   switch (command) {
     case "start":
-      await run();
+      if (process.argv.includes("--foreground")) {
+        // Foreground mode: used by service managers (launchd, systemd) and internal spawns
+        await run();
+      } else {
+        // Default: daemonize so the terminal is not blocked
+        if (isRunning) {
+          console.log("claude-code-router server is already running.");
+          break;
+        }
+        const cliPath = join(__dirname, "cli.js");
+        const startProcess = spawn("node", [cliPath, "start", "--foreground"], {
+          detached: true,
+          stdio: "ignore",
+        });
+        startProcess.on("error", (error) => {
+          console.error("Failed to start service:", error);
+          process.exit(1);
+        });
+        startProcess.unref();
+        if (await waitForService()) {
+          console.log("✅ Service started successfully in the background.");
+        } else {
+          console.error(
+            "Service startup timeout. Check logs at ~/.claude-code-router/logs/"
+          );
+          process.exit(1);
+        }
+      }
       break;
     case "stop":
       try {
@@ -280,7 +308,7 @@ async function main() {
       if (!isRunning) {
         console.log("Service not running, starting service...");
         const cliPath = join(__dirname, "cli.js");
-        const startProcess = spawn("node", [cliPath, "start"], {
+        const startProcess = spawn("node", [cliPath, "start", "--foreground"], {
           detached: true,
           stdio: "ignore",
         });
@@ -311,7 +339,7 @@ async function main() {
       if (!isRunning) {
         console.log("Service not running, starting service...");
         const cliPath = join(__dirname, "cli.js");
-        const startProcess = spawn("node", [cliPath, "start"], {
+        const startProcess = spawn("node", [cliPath, "start", "--foreground"], {
           detached: true,
           stdio: "ignore",
         });
@@ -360,7 +388,7 @@ async function main() {
             );
 
             // Try starting the service again
-            const restartProcess = spawn("node", [cliPath, "start"], {
+            const restartProcess = spawn("node", [cliPath, "start", "--foreground"], {
               detached: true,
               stdio: "ignore",
             });
