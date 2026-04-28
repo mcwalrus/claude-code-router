@@ -40,7 +40,7 @@ if curl -s --max-time 1 "http://localhost:${CCR_PORT}" -o /dev/null 2>/dev/null;
     printf '\n  \xe2\x9c\x93  claude-code-router active\n\n'
     ANTHROPIC_BASE_URL="http://localhost:${CCR_PORT}" exec "${REAL_CLAUDE}" "\$@"
 else
-    printf '\n  \xe2\x9c\x97  claude-code-router not connected -- run: ccr start\n\n'
+    printf '\n  \xe2\x9c\x97  claude-code-router not connected\n\n'
     exec "${REAL_CLAUDE}" "\$@"
 fi
 WRAPPER
