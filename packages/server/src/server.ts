@@ -113,7 +113,7 @@ export const createServer = async (config: any): Promise<any> => {
 
   // Add endpoint to read config.json with access control
   app.get("/api/config", {
-    schema: { response: { 200: ConfigSchema } },
+    schema: { response: { 200: { type: "object", additionalProperties: true } } },
   }, async (req: any, reply: any) => {
     return await readConfigFile();
   });

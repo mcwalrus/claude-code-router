@@ -24,21 +24,21 @@ const TransformerConfig = Type.Object(
 
 const ProviderSchema = Type.Object(
   {
-    name: Type.String({
+    name: Type.Optional(Type.String({
       description:
         'Unique provider identifier used in routing references (e.g. "openrouter")',
-    }),
-    api_base_url: Type.String({
+    })),
+    api_base_url: Type.Optional(Type.String({
       description: "Full API endpoint URL for this provider",
-    }),
-    api_key: Type.String({
+    })),
+    api_key: Type.Optional(Type.String({
       description:
         'API authentication key. Supports $VAR and ${VAR} env-variable interpolation.',
-    }),
-    models: Type.Array(Type.String(), {
+    })),
+    models: Type.Optional(Type.Array(Type.String(), {
       minItems: 1,
       description: "Model names available at this provider",
-    }),
+    })),
     transformer: Type.Optional(TransformerConfig),
     tokenizer: Type.Optional(
       Type.Object(
