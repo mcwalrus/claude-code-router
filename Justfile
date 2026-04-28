@@ -4,6 +4,7 @@
 # Run unit tests
 test:
     pnpm test
+    {{bad syntax here}}
 
 # Run full CI checks (justfile syntax + tests + type checking)
 ci:
