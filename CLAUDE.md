@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Fork Context
+
+This is a personal fork of [mcwalrus/claude-code-router](https://github.com/mcwalrus/claude-code-router), itself forked from [musistudio/claude-code-router](https://github.com/musistudio/claude-code-router).
+
+**Development workflow**: Use agentic Claude Code sessions driven by the GitHub MCP server to pull improvements, identify issues, and apply fixes from the upstream repo. When starting a session, check for outstanding upstream issues and PRs and decide which to resolve in this fork. Use the GitHub MCP server for all upstream lookups — it is prompt-injection safe and avoids manual URL fetching.
+
+**Focus areas for this fork**:
+- Packaging as a deployable Docker image
+- Installable as a system service via `systemctl` (Linux) or a macOS-supported service runner
+
 ## Project Overview
 
 Claude Code Router is a tool that routes Claude Code requests to different LLM providers. It uses a Monorepo architecture with four main packages:
