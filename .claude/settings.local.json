@@ -23,7 +23,9 @@
       "WebFetch(domain:goss.readthedocs.io)",
       "WebFetch(domain:docs.docker.com)",
       "Bash(bd init *)",
-      "Bash(bd stats *)"
+      "Bash(bd stats *)",
+      "Bash(hadolint --version)",
+      "Bash(hadolint *)"
     ]
   },
   "lsp": [

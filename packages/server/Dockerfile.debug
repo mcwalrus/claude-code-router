@@ -1,24 +1,28 @@
-# Build stage
-FROM node:24-alpine AS builder
+# Debug image — Debian 13 (trixie) full base for agent-assisted inspection.
+# Not for production use. Includes debugging tools and a shell environment
+# suitable for interactive container sessions.
+#
+# Build: docker build -f packages/server/Dockerfile.debug -t ccr:debug .
+# Run:   docker run -it --rm -p 3456:3456 ccr:debug
+
+# Build stage (same as production Dockerfile)
+FROM node:24-bookworm AS builder
 
 WORKDIR /app
 
-# hadolint ignore=DL3016 -- pnpm requires @latest; lockfile pins transitive deps
+# hadolint ignore=DL3016
 RUN npm install -g pnpm@latest && \
     rm -rf /root/.npm
 
-# Copy workspace config files
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.base.json ./
 COPY scripts ./scripts
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/core/package.json ./packages/core/
 COPY packages/server/package.json ./packages/server/
 
-# Install all dependencies (including dev) and prune store
 RUN pnpm install --frozen-lockfile && \
     pnpm store prune
 
-# Copy source and build
 COPY packages/shared ./packages/shared
 COPY packages/core ./packages/core
 COPY packages/server ./packages/server
@@ -33,36 +37,32 @@ WORKDIR /app/packages/server
 RUN pnpm build && \
     rm -rf node_modules/.cache
 
-# Production stage
-FROM node:24-alpine AS production
+# Debug runtime stage — Debian 13 full image
+FROM node:24-bookworm AS debug
 
-# hadolint ignore=DL3018,DL3016
-RUN apk add --no-cache curl && \
-    npm install -g pm2 pm2-logrotate --no-scripts && \
-    pm2 install pm2-logrotate && \
-    pm2 set pm2-logrotate:max_size 100M && \
-    pm2 set pm2-logrotate:retain 5 && \
-    pm2 set pm2-logrotate:compress true && \
-    pm2 set pm2-logrotate:rotateInterval '0 0 * * *'
+# hadolint ignore=DL3008,DL3016
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    jq \
+    procps \
+    net-tools \
+    vim \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g pm2 pm2-logrotate --no-scripts \
+    && pm2 install pm2-logrotate \
+    && pm2 set pm2-logrotate:max_size 100M \
+    && pm2 set pm2-logrotate:retain 5 \
+    && pm2 set pm2-logrotate:compress true \
+    && pm2 set pm2-logrotate:rotateInterval '0 0 * * *'
 
 WORKDIR /app
 
-# Copy core package (workspace dependency)
 COPY --from=builder /app/packages/core ./packages/core
-
-# Copy production dependencies
 COPY --from=builder /app/packages/server/node_modules ./packages/server/node_modules
-
-# Copy server bundle
 COPY --from=builder /app/packages/server/dist ./packages/server/dist
-
-# Copy pre-built UI assets into server dist
 COPY packages/ui/dist/. ./packages/server/dist/
-
-# Copy PM2 config
 COPY packages/server/ecosystem.config.cjs /app/
 
-# Create log directory
 RUN mkdir -p /root/.claude-code-router/logs
 
 EXPOSE 3456

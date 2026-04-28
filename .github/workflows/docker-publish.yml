@@ -69,6 +69,27 @@ jobs:
             type=raw,value=latest
             type=sha
 
+      - name: Build image for CVE scan (amd64 only)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./packages/server/Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: ${{ env.DOCKER_IMAGE }}:scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan image for CVEs
+        uses: aquasec/trivy-action@master
+        with:
+          image-ref: ${{ env.DOCKER_IMAGE }}:scan
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+          format: table
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
