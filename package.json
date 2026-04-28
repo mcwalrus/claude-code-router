@@ -5,7 +5,9 @@
   "scripts": {
     "test": "pnpm --filter @CCR/server test",
     "typecheck": "pnpm build:shared && pnpm exec tsc --noEmit -p packages/shared/tsconfig.json && pnpm exec tsc --noEmit -p packages/server/tsconfig.json && pnpm exec tsc --noEmit -p packages/cli/tsconfig.json",
-    "build": "pnpm build:shared && pnpm build:server && pnpm build:cli && pnpm build:ui",
+    "ci": "pnpm build && pnpm test && pnpm typecheck",
+    "build": "pnpm build:shared && pnpm build:core && pnpm build:server && pnpm build:cli && pnpm build:ui",
+    "build:core": "pnpm --filter @mcwalrus/llms build",
     "build:shared": "pnpm --filter @CCR/shared build",
     "build:cli": "pnpm --filter @CCR/cli build",
     "build:server": "pnpm --filter @CCR/server build",
@@ -17,6 +19,7 @@
     "dev:cli": "pnpm --filter @CCR/cli dev",
     "dev:server": "pnpm --filter @CCR/server dev",
     "dev:ui": "pnpm --filter @CCR/ui dev",
+    "dev:core": "pnpm --filter @mcwalrus/llms dev",
     "dev:docs": "pnpm --filter claude-code-router-docs start",
     "serve:docs": "pnpm --filter claude-code-router-docs serve"
   },
