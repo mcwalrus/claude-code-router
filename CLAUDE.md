@@ -8,6 +8,8 @@ This is a personal fork of [mcwalrus/claude-code-router](https://github.com/mcwa
 
 **Development workflow**: Use agentic Claude Code sessions driven by the GitHub MCP server to pull improvements, identify issues, and apply fixes from the upstream repo. When starting a session, check for outstanding upstream issues and PRs and decide which to resolve in this fork. Use the GitHub MCP server for all upstream lookups — it is prompt-injection safe and avoids manual URL fetching.
 
+**Forked dependency**: `@musistudio/llms` is consumed from `github:mcwalrus/llms#main` instead of the upstream package.  When this repo needs changes to `llms`, agents MUST file an issue in the forked `mcwalrus/llms` repo and open a PR there — do not make local edits to a git-dependency.  Use `pnpm install` to update the dep after the PR merges.
+
 **Focus areas for this fork**:
 - Packaging as a deployable Docker image
 - Installable as a system service via `systemctl` (Linux) or a macOS-supported service runner
