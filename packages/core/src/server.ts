@@ -273,5 +273,5 @@ export { ConfigService } from "./services/config";
 export { ProviderService } from "./services/provider";
 export { TransformerService } from "./services/transformer";
 export { TokenizerService } from "./services/tokenizer";
-export { pluginManager, tokenSpeedPlugin, getTokenSpeedStats, getGlobalTokenSpeedStats, CCRPlugin, CCRPluginOptions, PluginMetadata } from "./plugins";
+export { pluginManager, tokenSpeedPlugin, metricsPlugin, CCRPlugin, CCRPluginOptions, PluginMetadata } from "./plugins";
 export { SSEParserTransform, SSESerializerTransform, rewriteStream } from "./utils/sse";

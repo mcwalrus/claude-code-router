@@ -1,4 +1,4 @@
-# Build stage
+# ── Build stage ───────────────────────────────────────────────────────────
 FROM node:24-alpine AS builder
 
 WORKDIR /app
@@ -33,8 +33,26 @@ WORKDIR /app/packages/server
 RUN pnpm build && \
     rm -rf node_modules/.cache
 
-# Production stage
+# ── Production stage ──────────────────────────────────────────────────────
 FROM node:24-alpine AS production
+
+# Optional runtime env vars (no defaults — container stays flexible):
+#   CCR_PORT                         — TCP port (default from config.jsonc: 3456)
+#   CCR_HOST                         — Bind address (default from config.jsonc: 127.0.0.1)
+#   CCR_APIKEY                       — Proxy auth secret
+#   CCR_API_TIMEOUT_MS               — Upstream timeout in ms
+#   CCR_LOG_LEVEL                    — fatal | error | warn | info | debug | trace
+#   CCR_NON_INTERACTIVE_MODE         — true/false
+#   CCR_PROXY_URL                    — HTTP proxy URL
+#   CCR_ROUTER_DEFAULT               — "provider,model" default route
+#   CCR_ROUTER_BACKGROUND            — "provider,model" lightweight tasks
+#   CCR_ROUTER_THINK                 — "provider,model" reasoning tasks
+#   CCR_ROUTER_LONG_CONTEXT          — "provider,model" long-context tasks
+#   CCR_ROUTER_LONG_CONTEXT_THRESHOLD — number of tokens
+#   CCR_ROUTER_WEB_SEARCH            — "provider,model" web-search tasks
+#   CCR_ROUTER_IMAGE                 — "provider,model" image tasks
+#   CCR_PLUGINS                      — JSON array of plugin configs
+# Pass via --env-file, -e, or docker run -e CCR_PORT=8080 ...
 
 # hadolint ignore=DL3018,DL3016
 RUN apk add --no-cache curl && \
