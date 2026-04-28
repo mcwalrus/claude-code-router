@@ -109,6 +109,28 @@ source ~/.zshrc   # or source ~/.bashrc
 
 To undo, remove the block between `# CCR: Claude Code Router local proxy` and the next blank line from your shell config.
 
+### Step 6 — Worktree development (optional)
+
+When working in a [git worktree](https://git-scm.com/docs/git-worktree) or any secondary checkout, you can run an isolated dev container without touching the main `ccr-local-proxy`:
+
+```shell
+just worktree-dev
+```
+
+This starts a container named `ccr-wt-<directory>` on a random free port, using the worktree's own `config.json` / `config.jsonc` and `.env`. To run from inside a worktree when the `Justfile` lives in the main repo:
+
+```shell
+just --justfile /path/to/main/Justfile --working-directory $(pwd) worktree-dev
+```
+
+Point Claude Code at the printed URL (e.g. `http://127.0.0.1:57031`) by setting `ANTHROPIC_BASE_URL` for that session.
+
+List all worktree containers:
+
+```shell
+just worktree-list
+```
+
 ---
 
 ## 🚀 Getting Started

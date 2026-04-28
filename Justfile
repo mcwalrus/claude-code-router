@@ -201,6 +201,78 @@ local-proxy: _check-config
 proxy-stop:
     docker rm -f ccr-local-proxy >/dev/null 2>&1 && echo "Stopped." || echo "Not running."
 
+# Run a dev container from the current worktree's code.
+# Builds the image if needed, picks a free host port, and mounts the worktree
+# so code changes are live. Does NOT disturb ccr-local-proxy.
+#
+# Usage: just worktree-dev [config_file]
+#   config_file   path relative to worktree root (default: config.jsonc or config.json)
+#
+# Examples:
+#   just worktree-dev
+#   just worktree-dev config/gemini-2.5.jsonc
+worktree-dev config="":
+    #!/usr/bin/env sh
+    set -e
+    if ! docker image inspect ccr:local >/dev/null 2>&1; then
+        echo "Image ccr:local not found. Building..."
+        just build
+    fi
+    cfg="{{config}}"
+    if [ -z "$cfg" ]; then
+        if [ -f "config.jsonc" ]; then cfg="config.jsonc"
+        elif [ -f "config.json" ]; then cfg="config.json"
+        else
+            echo "Error: no config file found. Run 'just setup' first."
+            exit 1
+        fi
+    fi
+    if [ ! -f "$cfg" ]; then
+        echo "Error: config file not found: $cfg"
+        exit 1
+    fi
+    wt_name=$(basename "$(pwd)")
+    container_name="ccr-wt-${wt_name}"
+    free_port=$(python3 -c 'import socket, sys; s=socket.socket(); s.bind(("",0)); print(s.getsockname()[1]); s.close()' 2>/dev/null)
+    if [ -z "$free_port" ]; then
+        echo "Warning: could not find free port; letting Docker pick one"
+        port_map="0"
+    else
+        port_map="$free_port"
+    fi
+    docker rm -f "$container_name" >/dev/null 2>&1 || true
+    docker run -d \
+        --name "$container_name" \
+        -p "${port_map}:3456" \
+        -e NODE_ENV=development \
+        --env-file .env \
+        -v "$(pwd)/${cfg}:/root/.claude-code-router/config.json:ro" \
+        ccr:local \
+        node /app/packages/server/dist/index.js
+    actual_port=$(docker port "$container_name" 3456 | head -n1 | sed 's/.*://')
+    echo "========================================"
+    echo "Worktree dev container started"
+    echo "  Name:    $container_name"
+    echo "  URL:     http://127.0.0.1:$actual_port"
+    echo "  Config:  $cfg"
+    echo "  Code:    $(pwd)"
+    echo "========================================"
+    i=0
+    while [ $i -lt 10 ]; do
+        if curl -sf "http://127.0.0.1:$actual_port/health" >/dev/null 2>&1; then
+            echo "Health:  OK"
+            exit 0
+        fi
+        printf "."
+        sleep 1
+        i=$((i+1))
+    done
+    echo "Health:  FAIL — check logs: docker logs --tail 20 $container_name"
+
+# List running worktree-dev containers
+worktree-list:
+    docker ps --format "table {{ '{{' }}.Names{{ '}}' }}\t{{ '{{' }}.Ports{{ '}}' }}\t{{ '{{' }}.Status{{ '}}' }}" --filter "name=ccr-wt-"
+
 # Run as local dev proxy with a named config from config/
 # Usage: just dev           (defaults to gemini-2.5)
 #        just dev deepseek-v4-pro
