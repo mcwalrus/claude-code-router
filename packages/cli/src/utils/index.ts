@@ -1,11 +1,13 @@
 import fs from "node:fs/promises";
 import readline from "node:readline";
-import JSON5 from "json5";
+import { parse as parseJsonc, type ParseError } from "jsonc-parser";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import os from "node:os";
 import {
-  CONFIG_FILE,
+  CONFIG_FILE_JSONC,
+  EXAMPLE_CONFIG_CONTENT,
+  resolveConfigFile,
   HOME_DIR, PID_FILE,
   PLUGINS_DIR,
   PRESETS_DIR,
@@ -77,56 +79,41 @@ const confirm = async (query: string): Promise<boolean> => {
 };
 
 export const readConfigFile = async () => {
+  let configPath: string;
   try {
-    const config = await fs.readFile(CONFIG_FILE, "utf-8");
-    try {
-      // Try to parse with JSON5 first (which also supports standard JSON)
-      const parsedConfig = JSON5.parse(config);
-      // Interpolate environment variables in the parsed config
-      return interpolateEnvVars(parsedConfig);
-    } catch (parseError) {
-      console.error(`Failed to parse config file at ${CONFIG_FILE}`);
-      console.error("Error details:", (parseError as Error).message);
-      console.error("Please check your config file syntax.");
+    configPath = await resolveConfigFile();
+  } catch (err: any) {
+    console.error(err.message);
+    process.exit(1);
+    return;
+  }
+
+  try {
+    const content = await fs.readFile(configPath, "utf-8");
+    const errors: ParseError[] = [];
+    const parsedConfig = parseJsonc(content, errors);
+    if (errors.length > 0) {
+      console.error(`Failed to parse config file at ${configPath}`);
+      errors.slice(0, 5).forEach((e) => console.error(`  offset ${e.offset}: error code ${e.error}`));
       process.exit(1);
     }
+    return interpolateEnvVars(parsedConfig);
   } catch (readError: any) {
     if (readError.code === "ENOENT") {
-      // Config file doesn't exist, prompt user for initial setup
       try {
-        // Initialize directories
         await initDir();
-
-        // Backup existing config file if it exists
-        const backupPath = await backupConfigFile();
-        if (backupPath) {
-          console.log(
-              `Backed up existing configuration file to ${backupPath}`
-          );
-        }
-        const config = {
-          PORT: 3456,
-          Providers: [],
-          Router: {},
-        }
-        // Create a minimal default config file
-        await writeConfigFile(config);
-        console.log(
-            "Created minimal default configuration file at ~/.claude-code-router/config.json"
-        );
-        console.log(
-            "Please edit this file with your actual configuration."
-        );
-        return config
+        await fs.writeFile(CONFIG_FILE_JSONC, EXAMPLE_CONFIG_CONTENT);
+        console.log("Copied example configuration to ~/.claude-code-router/config.jsonc");
+        console.log("Please edit this file with your actual configuration.");
+        const errors: ParseError[] = [];
+        const parsed = parseJsonc(EXAMPLE_CONFIG_CONTENT, errors);
+        return interpolateEnvVars(parsed ?? {});
       } catch (error: any) {
-        console.error(
-            "Failed to create default configuration:",
-            error.message
-        );
+        console.error("Failed to create default configuration:", error.message);
         process.exit(1);
       }
     } else {
-      console.error(`Failed to read config file at ${CONFIG_FILE}`);
+      console.error(`Failed to read config file at ${configPath!}`);
       console.error("Error details:", readError.message);
       process.exit(1);
     }
@@ -135,36 +122,32 @@ export const readConfigFile = async () => {
 
 export const backupConfigFile = async () => {
   try {
-    if (await fs.access(CONFIG_FILE).then(() => true).catch(() => false)) {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const backupPath = `${CONFIG_FILE}.${timestamp}.bak`;
-      await fs.copyFile(CONFIG_FILE, backupPath);
+    const configPath = await resolveConfigFile().catch(() => null);
+    if (!configPath) return null;
+    if (!await fs.access(configPath).then(() => true).catch(() => false)) return null;
 
-      // Clean up old backups, keeping only the 3 most recent
-      try {
-        const configDir = path.dirname(CONFIG_FILE);
-        const configFileName = path.basename(CONFIG_FILE);
-        const files = await fs.readdir(configDir);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupPath = `${configPath}.${timestamp}.bak`;
+    await fs.copyFile(configPath, backupPath);
 
-        // Find all backup files for this config
-        const backupFiles = files
-          .filter(file => file.startsWith(configFileName) && file.endsWith('.bak'))
-          .sort()
-          .reverse(); // Sort in descending order (newest first)
-
-        // Delete all but the 3 most recent backups
-        if (backupFiles.length > 3) {
-          for (let i = 3; i < backupFiles.length; i++) {
-            const oldBackupPath = path.join(configDir, backupFiles[i]);
-            await fs.unlink(oldBackupPath);
-          }
+    try {
+      const configDir = path.dirname(configPath);
+      const configFileName = path.basename(configPath);
+      const files = await fs.readdir(configDir);
+      const backupFiles = files
+        .filter(file => file.startsWith(configFileName) && file.endsWith('.bak'))
+        .sort()
+        .reverse();
+      if (backupFiles.length > 3) {
+        for (let i = 3; i < backupFiles.length; i++) {
+          await fs.unlink(path.join(configDir, backupFiles[i]));
         }
-      } catch (cleanupError) {
-        console.warn("Failed to clean up old backups:", cleanupError);
       }
-
-      return backupPath;
+    } catch (cleanupError) {
+      console.warn("Failed to clean up old backups:", cleanupError);
     }
+
+    return backupPath;
   } catch (error) {
     console.error("Failed to backup config file:", error);
   }
@@ -173,8 +156,8 @@ export const backupConfigFile = async () => {
 
 export const writeConfigFile = async (config: any) => {
   await ensureDir(HOME_DIR);
-  const configWithComment = `${JSON.stringify(config, null, 2)}`;
-  await fs.writeFile(CONFIG_FILE, configWithComment);
+  const configPath = await resolveConfigFile().catch(() => CONFIG_FILE_JSONC);
+  await fs.writeFile(configPath, JSON.stringify(config, null, 2));
 };
 
 export const initConfig = async () => {

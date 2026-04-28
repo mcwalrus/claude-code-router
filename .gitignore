@@ -1,8 +1,11 @@
 node_modules
 .env
 
-# Local dev proxy configs (contain API keys)
+# Local dev proxy configs (contain API keys — never commit)
 config/*.json
+config/*.jsonc
+config.json
+config.jsonc
 log.txt
 .idea
 dist
