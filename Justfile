@@ -80,9 +80,13 @@ _check-config:
     fi
 
 # Run as a local router proxy. Requires config.jsonc (or config.json) and .env to exist.
-# Run `just setup` first if you haven't already.
-local-proxy: _check-config build
+# Run `just setup` then `just build` first if you haven't already.
+local-proxy: _check-config
     #!/usr/bin/env sh
+    if ! docker image inspect ccr:local >/dev/null 2>&1; then
+        echo "Image not found. Run: just build"
+        exit 1
+    fi
     if [ -f config.jsonc ]; then
         cfg=config.jsonc
     else
@@ -92,7 +96,8 @@ local-proxy: _check-config build
         -p 3456:3456 \
         --env-file .env \
         -v "$(pwd)/${cfg}:/root/.claude-code-router/config.jsonc:ro" \
-        ccr:local
+        ccr:local \
+        node /app/packages/server/dist/index.js
 
 # Run as local dev proxy with a named config from config/
 # Usage: just dev           (defaults to gemini-2.5)

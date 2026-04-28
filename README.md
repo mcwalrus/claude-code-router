@@ -64,17 +64,25 @@ ANTHROPIC_API_KEY=sk-ant-...
 OPENROUTER_API_KEY=sk-or-...
 ```
 
-### Step 3 — Start the proxy
+### Step 3 — Build the image
 
 ```shell
-just local:proxy
+just build
 ```
 
-Builds the Docker image and starts the router on port 3456, mounting the project-local `config.jsonc` and loading secrets from `.env`.
+Builds the TypeScript packages and Docker image. Only needed once, and again after code changes.
 
-**Already have `~/.claude-code-router/config.*` from an existing CCR install?** Use `just local:run` instead — it mounts your home-dir config directly so you don't need a project-level `config.jsonc` or `.env`.
+### Step 4 — Start the proxy
 
-### Step 4 — Configure your shell
+```shell
+just local-proxy
+```
+
+Starts the router on port 3456, mounting the project-local `config.jsonc` and loading secrets from `.env`. The image runs directly — no process manager overhead.
+
+**Already have `~/.claude-code-router/config.*` from an existing CCR install?** Use `just local-run` instead — it mounts your home-dir config directly so you don't need a project-level `config.jsonc` or `.env`.
+
+### Step 5 — Configure your shell
 
 To route all future Claude Code sessions through the proxy automatically:
 
