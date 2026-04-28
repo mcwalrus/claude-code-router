@@ -29,16 +29,45 @@ run: build
     fi
     docker run -it --rm -p 3456:3456 --env-file .env $mount ccr:local
 
-# Run as local router proxy using config.jsonc (or config.json) at the project root.
-# On first run, copies config.example.jsonc → config.jsonc for you to fill in.
-# Usage: just proxy
-proxy: build
+# First-time setup: copy config.example.jsonc → config.jsonc and .env.example → .env
+# Edit both files with your API keys before running `just proxy`.
+setup:
+    #!/usr/bin/env sh
+    if [ -f config.jsonc ] || [ -f config.json ]; then
+        echo "Config already exists — skipping config copy."
+    else
+        cp config.example.jsonc config.jsonc
+        echo "✓ Created config.jsonc"
+    fi
+    if [ -f .env ]; then
+        echo "✓ .env already exists — skipping."
+    else
+        cp .env.example .env
+        echo "✓ Created .env"
+    fi
+    echo ""
+    echo "Next steps:"
+    echo "  1. Edit config.jsonc — set your providers, models, and router rules"
+    echo "  2. Edit .env        — add your API keys (ANTHROPIC_API_KEY, etc.)"
+    echo "  3. Run: just proxy"
+
+# Internal: verify config.jsonc (or config.json) and .env exist before running
+[private]
+_check-config:
     #!/usr/bin/env sh
     if [ ! -f config.jsonc ] && [ ! -f config.json ]; then
-        cp config.example.jsonc config.jsonc
-        echo "Created config.jsonc — edit it with your API keys, then re-run: just proxy"
+        echo "Error: no config file found. Run 'just setup' first."
         exit 1
     fi
+    if [ ! -f .env ]; then
+        echo "Error: .env not found. Run 'just setup' first."
+        exit 1
+    fi
+
+# Run as a local router proxy. Requires config.jsonc (or config.json) and .env to exist.
+# Run `just setup` first if you haven't already.
+proxy: _check-config build
+    #!/usr/bin/env sh
     if [ -f config.jsonc ]; then
         cfg=config.jsonc
     else

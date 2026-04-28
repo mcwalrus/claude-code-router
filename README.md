@@ -29,6 +29,36 @@
 - **GitHub Actions Integration**: Trigger Claude Code tasks in your GitHub workflows.
 - **Plugin System**: Extend functionality with custom transformers.
 
+## 🐳 Running as a Local Docker Proxy
+
+The fastest way to run Claude Code Router locally without installing Node.js dependencies is via Docker using [just](https://github.com/casey/just).
+
+**Prerequisites:** Docker, `just` (`brew install just`), and API keys for your chosen providers.
+
+```shell
+# 1. Copy config and .env templates (run once)
+just setup
+
+# 2. Edit the generated files:
+#    config.jsonc — set providers, models, router rules
+#    .env         — add your API keys (ANTHROPIC_API_KEY, OPENROUTER_API_KEY, etc.)
+
+# 3. Build the image and start the proxy on port 3456
+just proxy
+```
+
+`just setup` copies `config.example.jsonc` → `config.jsonc` and `.env.example` → `.env`. Both files are gitignored and will never be committed. API keys in `config.jsonc` are referenced via `$VAR` syntax and injected at startup from `.env`.
+
+Once running, point Claude Code at the proxy:
+
+```shell
+export ANTHROPIC_BASE_URL=http://127.0.0.1:3456
+export ANTHROPIC_AUTH_TOKEN=your-secret-key  # matches APIKEY in config.jsonc
+claude
+```
+
+---
+
 ## 🚀 Getting Started
 
 ### 1. Installation
