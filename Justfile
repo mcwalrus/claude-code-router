@@ -122,3 +122,13 @@ run-debug config="gemini-2.5":
         --env-file .env \
         -v "$(pwd)/config/{{config}}.json:/root/.claude-code-router/config.json:ro" \
         ccr:debug
+
+# Check status of local proxy/router service
+status:
+    #!/usr/bin/env sh
+    echo "CCR Router Status:"
+    docker ps --filter ancestor=ccr:local --filter ancestor=ccr:debug 2>/dev/null | tail -n +2 | awk '{print $NF, $6, $7, $8, $9, $10, $11}' || echo "No containers running"
+    echo ""
+    if [ -f config.jsonc ] || [ -f config.json ]; then echo "✓ Config file exists"; else echo "✗ Config file missing"; fi
+    if [ -f .env ]; then echo "✓ .env file exists"; else echo "✗ .env file missing"; fi
+    if docker images | grep -q ccr:local; then echo "✓ ccr:local image built"; else echo "✗ ccr:local image not built"; fi
