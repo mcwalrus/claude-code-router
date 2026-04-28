@@ -1,4 +1,4 @@
-# Debug image — Debian 13 (trixie) full base for agent-assisted inspection.
+# Debug image — Debian 13 trixie (stable as of Aug 2025) full base for agent-assisted inspection.
 # Not for production use. Includes debugging tools and a shell environment
 # suitable for interactive container sessions.
 #
@@ -6,7 +6,7 @@
 # Run:   docker run -it --rm -p 3456:3456 ccr:debug
 
 # Build stage (same as production Dockerfile)
-FROM node:24-bookworm AS builder
+FROM node:24-trixie AS builder
 
 WORKDIR /app
 
@@ -38,7 +38,7 @@ RUN pnpm build && \
     rm -rf node_modules/.cache
 
 # Debug runtime stage — Debian 13 full image
-FROM node:24-bookworm AS debug
+FROM node:24-trixie AS debug
 
 # hadolint ignore=DL3008,DL3016
 RUN apt-get update && apt-get install -y --no-install-recommends \
