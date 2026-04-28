@@ -81,23 +81,47 @@ _check-config:
 
 # Run as a local router proxy. Requires config.jsonc (or config.json) and .env to exist.
 # Run `just setup` then `just build` first if you haven't already.
+# Starts detached, polls /health, and prints container/URL/status.
 local-proxy: _check-config
     #!/usr/bin/env sh
     if ! docker image inspect ccr:local >/dev/null 2>&1; then
         echo "Image not found. Run: just build"
         exit 1
     fi
-    if [ -f config.jsonc ]; then
-        cfg=config.jsonc
-    else
-        cfg=config.json
-    fi
-    docker run -it --rm \
+    if [ -f config.jsonc ]; then cfg=config.jsonc; else cfg=config.json; fi
+    docker rm -f ccr-local-proxy >/dev/null 2>&1 || true
+    docker run -d \
+        --name ccr-local-proxy \
         -p 3456:3456 \
+        -e NODE_ENV=production \
         --env-file .env \
         -v "$(pwd)/${cfg}:/root/.claude-code-router/config.jsonc:ro" \
         ccr:local \
-        node /app/packages/server/dist/index.js
+        node /app/packages/server/dist/index.js >/dev/null
+    printf "Starting"
+    i=0
+    while [ $i -lt 15 ]; do
+        if curl -sf http://127.0.0.1:3456/health >/dev/null 2>&1; then break; fi
+        printf "."
+        sleep 1
+        i=$((i+1))
+    done
+    echo ""
+    if curl -sf http://127.0.0.1:3456/health >/dev/null 2>&1; then
+        cid=$(docker ps --filter name=ccr-local-proxy --format "{{.ID}}")
+        echo "Container: ${cid}  (ccr-local-proxy)"
+        echo "URL:       http://127.0.0.1:3456"
+        echo "Status:    OK"
+    else
+        echo "Proxy failed to start. Logs:"
+        docker logs ccr-local-proxy --tail 20
+        docker rm -f ccr-local-proxy >/dev/null 2>&1
+        exit 1
+    fi
+
+# Stop the local proxy container started by local-proxy
+proxy-stop:
+    docker rm -f ccr-local-proxy >/dev/null 2>&1 && echo "Stopped." || echo "Not running."
 
 # Run as local dev proxy with a named config from config/
 # Usage: just dev           (defaults to gemini-2.5)
