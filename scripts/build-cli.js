@@ -46,10 +46,29 @@ try {
 
   // Step 4: Build the CLI application
   console.log('Building CLI application...');
-  execSync('esbuild src/cli.ts --bundle --platform=node --minify --tree-shaking=true --outfile=dist/cli.js', {
-    stdio: 'inherit',
-    cwd: cliDir
-  });
+  execSync(
+    'esbuild src/cli.ts --bundle --platform=node --minify --tree-shaking=true --outfile=dist/cli.js',
+    {
+      stdio: 'inherit',
+      cwd: cliDir
+    }
+  );
+
+  // Step 4b: Copy jsonc-parser impl/ directory so runtime dynamic requires resolve.
+  // jsonc-parser's UMD bundle (used via its CJS entry) does require('./impl/*')
+  // internally; esbuild cannot inline these. We copy the files to dist so the
+  // relative lookups succeed at runtime.
+  const jsoncParserImplSource = path.join(sharedDir, 'node_modules', 'jsonc-parser', 'lib', 'umd', 'impl');
+  const jsoncParserImplDest = path.join(cliDistDir, 'impl');
+  if (fs.existsSync(jsoncParserImplSource)) {
+    if (fs.existsSync(jsoncParserImplDest)) {
+      fs.rmSync(jsoncParserImplDest, { recursive: true, force: true });
+    }
+    fs.cpSync(jsoncParserImplSource, jsoncParserImplDest, { recursive: true });
+    console.log('✓ jsonc-parser impl/ copied to CLI dist');
+  } else {
+    console.warn('⚠ Warning: jsonc-parser impl/ not found, CLI may fail at runtime');
+  }
 
   // Step 5: Copy tiktoken WASM file from server dist to CLI dist
   console.log('Copying tiktoken_bg.wasm from server to CLI dist...');
