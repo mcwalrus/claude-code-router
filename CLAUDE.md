@@ -12,6 +12,16 @@ This is a personal fork of [mcwalrus/claude-code-router](https://github.com/mcwa
 - Packaging as a deployable Docker image
 - Installable as a system service via `systemctl` (Linux) or a macOS-supported service runner
 
+## GitHub Actions
+
+CI workflows are intentionally disabled for this personal fork. Workflow files live in `workflows/` (not `.github/workflows/`) so GitHub does not trigger them.
+
+To re-enable: `mkdir -p .github && mv workflows .github/workflows`
+
+Current workflows:
+- `workflows/docker-publish.yml` — builds multi-arch Docker image, runs Trivy CVE scan, pushes to Docker Hub on version tags
+- `workflows/docs.yml` — docs build/publish
+
 ## Project Overview
 
 Claude Code Router is a tool that routes Claude Code requests to different LLM providers. It uses a Monorepo architecture with four main packages:
