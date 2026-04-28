@@ -35,7 +35,9 @@
       "Bash(echo \"tsc_exit:$?\")",
       "Bash(pnpm run *)",
       "EnterWorktree",
-      "ExitWorktree"
+      "ExitWorktree",
+      "Bash(docker run *)",
+      "Bash(docker build *)"
     ]
   },
   "lsp": [
