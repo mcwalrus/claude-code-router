@@ -1,12 +1,15 @@
 import { createEnvVariables } from "./createEnvVariables";
+import { writeShellConfig } from "./writeShellConfig";
 
-/**
- * Execute the env command
- */
-export const activateCommand = async () => {
+export const activateCommand = async (args: string[] = []) => {
   const envVars = await createEnvVariables();
 
-  // Output in shell-friendly format for eval
+  if (args.includes("--write")) {
+    await writeShellConfig(envVars);
+    return;
+  }
+
+  // Default: print exports to stdout for eval
   for (const [key, value] of Object.entries(envVars)) {
     if (value === "") {
       console.log(`export ${key}=""`);
@@ -16,4 +19,4 @@ export const activateCommand = async () => {
       console.log(`export ${key}="${value}"`);
     }
   }
-}
+};

@@ -57,6 +57,7 @@ Commands:
   preset        Manage presets (export, install, list, delete)
   install       Install preset from GitHub marketplace
   activate      Output environment variables for shell integration
+                  --write   Persist config to ~/.zshrc / ~/.bashrc (idempotent)
   ui            Open the web UI in browser
   -v, version   Show version information
   -h, help      Show help information
@@ -73,7 +74,8 @@ Examples:
   ccr preset install /path/to/preset     # Install a preset from directory
   ccr preset list                        # List all presets
   ccr install my-preset                  # Install preset from marketplace
-  eval "$(ccr activate)"  # Set environment variables globally
+  eval "$(ccr activate)"         # Apply to current session
+  ccr activate --write           # Persist to ~/.zshrc / ~/.bashrc for all future sessions
   ccr ui
 `;
 
@@ -302,7 +304,7 @@ async function main() {
       break;
     case "activate":
     case "env":
-      await activateCommand();
+      await activateCommand(process.argv.slice(3));
       break;
     case "code":
       if (!isRunning) {
