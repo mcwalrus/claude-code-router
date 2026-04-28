@@ -22,12 +22,11 @@
   "dependencies": {
     "@fastify/multipart": "^9.0.0",
     "@fastify/static": "^8.2.0",
-    "@fastify/swagger": "^9.7.0",
-    "@fastify/swagger-ui": "^5.2.6",
     "@musistudio/llms": "workspace:*",
     "adm-zip": "^0.5.16",
     "dotenv": "^16.4.7",
     "json5": "^2.2.3",
+    "jsonc-parser": "^3.3.1",
     "lru-cache": "^11.2.2",
     "rotating-file-stream": "^3.2.7",
     "shell-quote": "^1.8.3",
@@ -36,6 +35,7 @@
   },
   "devDependencies": {
     "@CCR/shared": "workspace:*",
+    "@fastify/swagger": "^9.7.0",
     "@types/adm-zip": "^0.5.7",
     "@types/node": "^24.0.15",
     "esbuild": "^0.25.1",

@@ -24,8 +24,14 @@ try {
 
   // Build the server application
   console.log('Building server application...');
-  // 使用 minify 和 tree-shaking 优化体积
-  execSync('esbuild src/index.ts --bundle --platform=node --minify --tree-shaking=true --outfile=dist/index.js', {
+  execSync('esbuild src/index.ts --bundle --platform=node --main-fields=module,main --minify --tree-shaking=true --outfile=dist/index.js', {
+    stdio: 'inherit',
+    cwd: serverDir
+  });
+
+  // Build api-schemas separately so gen-openapi.js can import it at build time
+  console.log('Building API schemas module...');
+  execSync('esbuild src/api-schemas.ts --bundle --platform=node --outfile=dist/api-schemas.js', {
     stdio: 'inherit',
     cwd: serverDir
   });
@@ -41,6 +47,13 @@ try {
   } else {
     console.warn('Warning: tiktoken_bg.wasm not found, skipping...');
   }
+
+  // Generate static OpenAPI spec (requires shared package already built)
+  console.log('Generating static OpenAPI spec...');
+  execSync(`node ${path.join(__dirname, 'gen-openapi.js')}`, {
+    stdio: 'inherit',
+    cwd: path.join(__dirname, '..'),
+  });
 
   console.log('Server build completed successfully!');
 } catch (error) {

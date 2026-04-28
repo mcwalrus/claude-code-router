@@ -1,11 +1,9 @@
 import Server, { calculateTokenCount, TokenizerService } from "@musistudio/llms";
 import { readConfigFile, writeConfigFile, backupConfigFile } from "./utils";
 import { join } from "path";
-import swagger from "@fastify/swagger";
-import swaggerUi from "@fastify/swagger-ui";
 import fastifyStatic from "@fastify/static";
-import { ConfigSchema } from "@CCR/shared";
-import { readdirSync, statSync, readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, rmSync } from "fs";
+import { apiSchemas, configJsonSchema } from "./api-schemas";
+import { readdirSync, statSync, readFileSync, writeFileSync, existsSync, unlinkSync, rmSync } from "fs";
 import { homedir } from "os";
 import {
   getPresetDir,
@@ -15,10 +13,8 @@ import {
   isPresetInstalled,
   extractPreset,
   HOME_DIR,
-  extractMetadata,
   loadConfigFromManifest,
   downloadPresetToTemp,
-  getTempDir,
   findMarketPresetByName,
   getMarketPresets,
   type PresetFile,
@@ -38,33 +34,9 @@ export const createServer = async (config: any): Promise<any> => {
     },
   });
 
-  const docsPath = process.env.CCR_DOCS_PATH || "/documentation";
+  app.addSchema(configJsonSchema);
 
-  app.register(swagger, {
-    openapi: {
-      info: {
-        title: "Claude Code Router API",
-        version: "1.0.0",
-        description: "REST API for managing Claude Code Router configuration, presets, and logs",
-      },
-      components: {
-        securitySchemes: {
-          apiKey: {
-            type: "apiKey",
-            in: "header",
-            name: "x-api-key",
-            description: "API key required when providers are configured",
-          },
-        },
-      },
-    },
-  });
-
-  app.register(swaggerUi, {
-    routePrefix: docsPath,
-  });
-
-  app.post("/v1/messages/count_tokens", async (req: any, reply: any) => {
+  app.post("/v1/messages/count_tokens", { schema: apiSchemas.countTokens }, async (req: any, reply: any) => {
     const {messages, tools, system, model} = req.body;
     const tokenizerService = (app as any)._server!.tokenizerService as TokenizerService;
 
@@ -112,20 +84,16 @@ export const createServer = async (config: any): Promise<any> => {
   });
 
   // Add endpoint to read config.json with access control
-  app.get("/api/config", {
-    schema: { response: { 200: { type: "object", additionalProperties: true } } },
-  }, async (req: any, reply: any) => {
+  app.get("/api/config", { schema: apiSchemas.configGet }, async (req: any, reply: any) => {
     return await readConfigFile();
   });
 
   // Return the JSON Schema for the config format — useful for AI agents and tooling
-  app.get("/api/config/schema", {
-    schema: { response: { 200: { type: "object", additionalProperties: true } } },
-  }, async () => {
-    return JSON.parse(JSON.stringify(ConfigSchema));
+  app.get("/api/config/schema", { schema: apiSchemas.configSchema }, async () => {
+    return configJsonSchema;
   });
 
-  app.get("/api/transformers", async (req: any, reply: any) => {
+  app.get("/api/transformers", { schema: apiSchemas.transformers }, async (req: any, reply: any) => {
     const transformers =
       (app as any)._server!.transformerService.getAllTransformers();
     const transformerList = Array.from(transformers.entries()).map(
@@ -138,9 +106,7 @@ export const createServer = async (config: any): Promise<any> => {
   });
 
   // Add endpoint to save config.json with access control
-  app.post("/api/config", {
-    schema: { body: { type: "object", additionalProperties: true } },
-  }, async (req: any, reply: any) => {
+  app.post("/api/config", { schema: apiSchemas.configPost }, async (req: any, reply: any) => {
     const newConfig = req.body;
 
     // Backup existing config file if it exists
@@ -166,7 +132,7 @@ export const createServer = async (config: any): Promise<any> => {
   });
 
   // Get log file list endpoint
-  app.get("/api/logs/files", async (req: any, reply: any) => {
+  app.get("/api/logs/files", { schema: apiSchemas.logFiles }, async (req: any, reply: any) => {
     try {
       const logDir = join(homedir(), ".claude-code-router", "logs");
       const logFiles: Array<{ name: string; path: string; size: number; lastModified: string }> = [];
@@ -200,7 +166,7 @@ export const createServer = async (config: any): Promise<any> => {
   });
 
   // Get log content endpoint
-  app.get("/api/logs", async (req: any, reply: any) => {
+  app.get("/api/logs", { schema: apiSchemas.logRead }, async (req: any, reply: any) => {
     try {
       const filePath = (req.query as any).file as string;
       let logFilePath: string;
@@ -228,7 +194,7 @@ export const createServer = async (config: any): Promise<any> => {
   });
 
   // Clear log content endpoint
-  app.delete("/api/logs", async (req: any, reply: any) => {
+  app.delete("/api/logs", { schema: apiSchemas.logClear }, async (req: any, reply: any) => {
     try {
       const filePath = (req.query as any).file as string;
       let logFilePath: string;
@@ -253,7 +219,7 @@ export const createServer = async (config: any): Promise<any> => {
   });
 
   // Get presets list
-  app.get("/api/presets", async (req: any, reply: any) => {
+  app.get("/api/presets", { schema: apiSchemas.presetsList }, async (req: any, reply: any) => {
     try {
       const presetsDir = join(HOME_DIR, "presets");
 
@@ -305,7 +271,7 @@ export const createServer = async (config: any): Promise<any> => {
   });
 
   // Get preset details
-  app.get("/api/presets/:name", async (req: any, reply: any) => {
+  app.get("/api/presets/:name", { schema: apiSchemas.presetsGet }, async (req: any, reply: any) => {
     try {
       const { name } = req.params;
       const presetDir = getPresetDir(name);
@@ -331,7 +297,7 @@ export const createServer = async (config: any): Promise<any> => {
   });
 
   // Apply preset (configure sensitive information)
-  app.post("/api/presets/:name/apply", async (req: any, reply: any) => {
+  app.post("/api/presets/:name/apply", { schema: apiSchemas.presetsApply }, async (req: any, reply: any) => {
     try {
       const { name } = req.params;
       const { secrets } = req.body;
@@ -368,7 +334,7 @@ export const createServer = async (config: any): Promise<any> => {
   });
 
   // Delete preset
-  app.delete("/api/presets/:name", async (req: any, reply: any) => {
+  app.delete("/api/presets/:name", { schema: apiSchemas.presetsDelete }, async (req: any, reply: any) => {
     try {
       const { name } = req.params;
       const presetDir = getPresetDir(name);
@@ -389,7 +355,7 @@ export const createServer = async (config: any): Promise<any> => {
   });
 
   // Get preset market list
-  app.get("/api/presets/market", async (req: any, reply: any) => {
+  app.get("/api/presets/market", { schema: apiSchemas.presetsMarket }, async (req: any, reply: any) => {
     try {
       // Use market presets function
       const marketPresets = await getMarketPresets();
@@ -401,7 +367,7 @@ export const createServer = async (config: any): Promise<any> => {
   });
 
   // Install preset from GitHub repository by preset name
-  app.post("/api/presets/install/github", async (req: any, reply: any) => {
+  app.post("/api/presets/install/github", { schema: apiSchemas.presetsInstallGithub }, async (req: any, reply: any) => {
     try {
       const { presetName } = req.body;
 
@@ -523,6 +489,43 @@ export const createServer = async (config: any): Promise<any> => {
     const manifest = JSON.parse(entry.getData().toString('utf-8')) as ManifestFile;
     return manifestToPresetFile(manifest);
   }
+
+  // Serve pre-generated OpenAPI spec (built by gen-openapi.js, written to dist/openapi.json)
+  const docsPath = process.env.CCR_DOCS_PATH || "/documentation";
+  app.get(`${docsPath}/json`, async (req: any, reply: any) => {
+    const specPath = join(__dirname, "openapi.json");
+    if (!existsSync(specPath)) {
+      reply.status(503).send({ error: "OpenAPI spec not found — rebuild the server package" });
+      return;
+    }
+    return JSON.parse(readFileSync(specPath, "utf-8"));
+  });
+
+  // Serve Swagger UI via CDN (no local static assets needed)
+  app.get(docsPath, async (req: any, reply: any) => {
+    reply.type("text/html").send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claude Code Router — API Docs</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<script>
+SwaggerUIBundle({
+  url: '${docsPath}/json',
+  dom_id: '#swagger-ui',
+  presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+  layout: 'BaseLayout',
+  deepLinking: true
+});
+</script>
+</body>
+</html>`);
+  });
 
   return server;
 };
