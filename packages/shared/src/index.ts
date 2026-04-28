@@ -1,5 +1,6 @@
 export * from "./constants";
 export * from "./config-schema";
+export * from "./env-config";
 
 // Export preset-related functionality
 export * from './preset/types';

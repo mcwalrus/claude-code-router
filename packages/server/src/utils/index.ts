@@ -10,6 +10,7 @@ import {
   HOME_DIR,
   PLUGINS_DIR,
   validateConfig,
+  loadEnvConfig,
 } from "@CCR/shared";
 
 // Function to interpolate environment variables in config values
@@ -159,8 +160,58 @@ export const writeConfigFile = async (config: any) => {
   await fs.writeFile(configPath, JSON.stringify(config, null, 2));
 };
 
+/**
+ * Merge JSON config with CCR_ prefixed env vars.
+ * Env vars take precedence over JSON values.
+ */
+function mergeEnvConfig(config: any): any {
+  if (!config || typeof config !== "object") {
+    config = {};
+  }
+  const envConfig = loadEnvConfig();
+  if (Object.keys(envConfig).length === 0) {
+    return config;
+  }
+  // Deep merge: env overrides JSON, but preserves un-touched JSON structure
+  return deepMerge(config, envConfig);
+}
+
+function deepMerge(target: any, source: any): any {
+  if (source === null || source === undefined) return target;
+  if (target === null || target === undefined) return source;
+
+  if (Array.isArray(target) && Array.isArray(source)) {
+    // For arrays, source entries override target entries by index (if present)
+    const result = [...target];
+    for (let i = 0; i < source.length; i++) {
+      if (i < result.length) {
+        result[i] = deepMerge(result[i], source[i]);
+      } else {
+        result.push(source[i]);
+      }
+    }
+    return result;
+  }
+
+  if (typeof target === "object" && typeof source === "object" && !Array.isArray(source)) {
+    const result = { ...target };
+    for (const [key, val] of Object.entries(source)) {
+      if (key in result) {
+        result[key] = deepMerge(result[key], val);
+      } else {
+        result[key] = val;
+      }
+    }
+    return result;
+  }
+
+  // Primitives: source wins
+  return source;
+}
+
 export const initConfig = async () => {
-  const config = await readConfigFile();
-  Object.assign(process.env, config);
-  return config;
+  const fileConfig = await readConfigFile();
+  const merged = mergeEnvConfig(fileConfig);
+  Object.assign(process.env, merged);
+  return merged;
 };

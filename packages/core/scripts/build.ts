@@ -29,7 +29,16 @@ const baseConfig: esbuild.BuildOptions = {
       baseUrl,
     }),
   ],
-  external: ["fastify", "dotenv", "@fastify/cors", "undici", "tiktoken", "@CCR/shared", "lru-cache"],
+  external: [
+    "fastify",
+    "dotenv",
+    "@fastify/cors",
+    "undici",
+    "tiktoken",
+    "@CCR/shared",
+    "lru-cache",
+    "prom-client",
+  ],
 };
 
 // Generate type declarations with resolved path aliases

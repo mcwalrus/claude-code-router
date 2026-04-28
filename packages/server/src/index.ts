@@ -15,7 +15,7 @@ import JSON5 from "json5";
 import { IAgent, ITool } from "./agents/type";
 import agentsManager from "./agents";
 import { EventEmitter } from "node:events";
-import { pluginManager, tokenSpeedPlugin } from "@musistudio/llms";
+import { pluginManager, tokenSpeedPlugin, metricsPlugin } from "@musistudio/llms";
 
 const event = new EventEmitter()
 
@@ -77,6 +77,10 @@ async function registerPluginsFromConfig(serverInstance: any, config: any): Prom
             ],
             ...options
           });
+          break;
+
+        case 'metrics':
+          pluginManager.registerPlugin(metricsPlugin, { enabled, ...options });
           break;
 
         default:

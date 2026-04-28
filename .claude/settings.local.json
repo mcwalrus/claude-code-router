@@ -38,7 +38,9 @@
       "ExitWorktree",
       "Bash(docker run *)",
       "Bash(docker build *)",
-      "Bash(just *)"
+      "Bash(just *)",
+      "Bash(docker exec *)",
+      "Bash(npx vitest *)"
     ]
   },
   "lsp": [
