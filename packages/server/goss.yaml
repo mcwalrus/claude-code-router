@@ -1,0 +1,42 @@
+http:
+  # Health endpoint — always public, no auth
+  http://localhost:3456/health:
+    status: 200
+    timeout: 5000
+
+  # Swagger UI — follows redirect to /documentation/
+  http://localhost:3456/documentation:
+    status: 200
+    timeout: 5000
+    headers:
+      Content-Type:
+        - text/html
+
+  # OpenAPI JSON spec — verifies content-type and spec identity
+  http://localhost:3456/documentation/json:
+    status: 200
+    timeout: 5000
+    headers:
+      Content-Type:
+        - application/json
+    body:
+      - '"openapi"'
+      - Claude Code Router API
+
+port:
+  tcp:3456:
+    listening: true
+    ip:
+      - "0.0.0.0"
+
+process:
+  node:
+    running: true
+
+file:
+  /root/.claude-code-router/logs:
+    exists: true
+    filetype: directory
+  /app/packages/server/dist/index.js:
+    exists: true
+    filetype: file
