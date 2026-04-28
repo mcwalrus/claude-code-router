@@ -154,7 +154,7 @@ export const createServer = async (config: any): Promise<any> => {
 
   // Add endpoint to save config.json with access control
   app.post("/api/config", {
-    schema: { body: ConfigSchema },
+    schema: { body: { type: "object", additionalProperties: true } },
   }, async (req: any, reply: any) => {
     const newConfig = req.body;
 

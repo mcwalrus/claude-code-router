@@ -21,3 +21,4 @@ docs/.docusaurus
 .dolt/
 *.db
 .beads-credential-key
+.goss-cache/
