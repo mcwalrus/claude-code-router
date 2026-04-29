@@ -418,6 +418,100 @@ stack-metrics:
     fi
     curl -s http://127.0.0.1:9464/metrics
 
+# Show running stack services and their health status.
+stack-status:
+    #!/usr/bin/env sh
+    echo "=== Stack services ==="
+    docker compose ps --format "table {{ '{{' }}.Name{{ '}}' }}\t{{ '{{' }}.Status{{ '}}' }}\t{{ '{{' }}.Ports{{ '}}' }}" 2>/dev/null || echo "No compose stack running."
+    echo ""
+    echo "=== Health checks ==="
+    running=0
+    healthy=0
+    for svc in ccr-local ccr-hop prometheus; do
+        if docker ps --filter "name=${svc}" --filter "status=running" --format "{{ '{{' }}.Names{{ '}}' }}" | grep -q "${svc}"; then
+            running=$((running + 1))
+            case "$svc" in
+                ccr-local) url="http://127.0.0.1:3456/health" ;;
+                ccr-hop)   url="http://127.0.0.1:3457/health" ;;
+                prometheus) url="http://127.0.0.1:9090/-/healthy" ;;
+            esac
+            if curl -sf "$url" >/dev/null 2>&1; then
+                echo "  ${svc}: UP (${url})"
+                healthy=$((healthy + 1))
+            else
+                echo "  ${svc}: RUNNING but health check failed (${url})"
+            fi
+        else
+            echo "  ${svc}: not running"
+        fi
+    done
+    echo ""
+    echo "Summary: ${running} services running, ${healthy} healthy"
+
+# Rebuild the CCR Docker image before starting the stack.
+# Usage: just stack-build [--no-cache]
+stack-build *flags:
+    #!/usr/bin/env sh
+    set -e
+    start=$(date +%s)
+    echo "Building CCR image..."
+    docker compose build ccr-local {{flags}}
+    end=$(date +%s)
+    echo "Build complete in $((end - start))s"
+    docker images --format "table {{ '{{' }}.Repository{{ '}}' }}:{{ '{{' }}.Tag{{ '}}' }}\t{{ '{{' }}.Size{{ '}}' }}\t{{ '{{' }}.CreatedSince{{ '}}' }}" | grep -E "ccr|REPO" | head -5
+
+# Restart the full stack gracefully (down → build → up).
+# Usage: just stack-restart [--build]
+stack-restart *flags:
+    #!/usr/bin/env sh
+    set -e
+    start=$(date +%s)
+    echo "Restarting stack..."
+    just stack-down
+    build=0
+    for arg in {{flags}}; do
+        [ "$arg" = "--build" ] && build=1
+    done
+    if [ "$build" = "1" ]; then
+        echo "Rebuilding image..."
+        just stack-build
+    fi
+    just stack-up
+    end=$(date +%s)
+    echo "Restart complete in $((end - start))s"
+
+# Run integration tests against the live stack.
+# Requires stack-up to be running first.
+stack-test:
+    #!/usr/bin/env sh
+    set -e
+    echo "=== Checking stack health before tests ==="
+    if ! curl -sf http://127.0.0.1:3456/health >/dev/null 2>&1; then
+        echo "Error: CCR not reachable at http://127.0.0.1:3456/health"
+        echo "Run 'just stack-up' first."
+        exit 1
+    fi
+    echo "CCR: OK"
+    if ! curl -sf http://127.0.0.1:9464/metrics >/dev/null 2>&1; then
+        echo "Error: CCR metrics not reachable at http://127.0.0.1:9464/metrics"
+        exit 1
+    fi
+    echo "Metrics: OK"
+    echo ""
+    echo "=== Running hop-proxy probe ==="
+    just emulator-hop-probe 2>/dev/null && echo "Hop probe: OK" || echo "Hop probe: SKIP (hop not configured)"
+    echo ""
+    echo "=== Running metrics smoke test ==="
+    output=$(curl -s http://127.0.0.1:9464/metrics)
+    if echo "$output" | grep -qE '^# TYPE|^# HELP'; then
+        echo "Metrics format: OK"
+    else
+        echo "Error: metrics endpoint returned unexpected output"
+        exit 1
+    fi
+    echo ""
+    echo "=== All stack tests passed ==="
+
 # ── Hop-Proxy Emulator ────────────────────────────────────────────────────────
 
 # Probe the hop chain: container CCR → host CCR → upstream
@@ -508,3 +602,68 @@ agent-stop name:
         exit 0
     fi
     echo "Error: container not found: {{name}} or ccr-agent-{{name}}"
+
+# Scrape and display metrics for a named agent container (or all agents).
+# Usage: just agent-metrics [name]
+agent-metrics name="":
+    #!/usr/bin/env sh
+    set -e
+    if [ -z "{{name}}" ]; then
+        containers=$(docker ps --filter "name=ccr-agent-" --format "{{ '{{' }}.Names{{ '}}' }}")
+        if [ -z "$containers" ]; then
+            echo "No agent containers running."
+            exit 0
+        fi
+        for ctr in $containers; do
+            port=$(docker port "$ctr" 9464 2>/dev/null | head -n1 | sed 's/.*://')
+            if [ -n "$port" ]; then
+                echo "=== $ctr (port $port) ==="
+                curl -s "http://127.0.0.1:${port}/metrics" || echo "  (metrics not reachable)"
+            else
+                echo "=== $ctr: metrics port not mapped ==="
+            fi
+        done
+        exit 0
+    fi
+    full_name="{{name}}"
+    if ! docker ps --filter "name=${full_name}" --format "{{ '{{' }}.Names{{ '}}' }}" | grep -q "${full_name}"; then
+        full_name="ccr-agent-{{name}}"
+    fi
+    port=$(docker port "$full_name" 9464 2>/dev/null | head -n1 | sed 's/.*://')
+    if [ -z "$port" ]; then
+        echo "Error: no metrics port (9464) mapped for $full_name"
+        echo "Note: agent-dev only maps port 3456; rebuild container with -p METRICS_PORT:9464 for metrics support."
+        exit 1
+    fi
+    curl -s "http://127.0.0.1:${port}/metrics"
+
+# Stream logs for a named agent container.
+# Usage: just agent-logs [name]
+agent-logs name="":
+    #!/usr/bin/env sh
+    if [ -z "{{name}}" ]; then
+        echo "Usage: just agent-logs <name>"
+        echo ""
+        echo "Running agent containers:"
+        docker ps --filter "name=ccr-agent-" --format "  {{ '{{' }}.Names{{ '}}' }}"
+        exit 1
+    fi
+    full_name="{{name}}"
+    if ! docker ps --filter "name=${full_name}" --format "{{ '{{' }}.Names{{ '}}' }}" | grep -q "${full_name}"; then
+        full_name="ccr-agent-{{name}}"
+    fi
+    docker logs -f "$full_name"
+
+# Tail logs for all running agent containers (one stream each via background processes).
+agent-logs-all:
+    #!/usr/bin/env sh
+    containers=$(docker ps --filter "name=ccr-agent-" --format "{{ '{{' }}.Names{{ '}}' }}")
+    if [ -z "$containers" ]; then
+        echo "No agent containers running."
+        exit 0
+    fi
+    echo "Tailing logs for all agents (Ctrl+C to stop)..."
+    for ctr in $containers; do
+        docker logs -f --tail=20 "$ctr" 2>&1 | sed "s/^/[$ctr] /" &
+    done
+    wait
