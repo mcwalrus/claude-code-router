@@ -9,6 +9,7 @@ import JSON5 from 'json5';
 import { exportPresetCli } from './export';
 import { installPresetCli, loadPreset } from './install';
 import { HOME_DIR } from '@CCR/shared';
+import { EXIT_USER_ERROR, EXIT_SYSTEM_ERROR } from '../errors';
 
 // ANSI color codes
 const RESET = "\x1B[0m";
@@ -92,7 +93,7 @@ async function deletePreset(name: string): Promise<void> {
   // Validate preset name (prevent path traversal)
   if (!name || name.includes('..') || name.includes('/') || name.includes('\\')) {
     console.error(`\n${YELLOW}Error:${RESET} Invalid preset name.\n`);
-    process.exit(1);
+    process.exit(EXIT_USER_ERROR);
   }
 
   const presetDir = path.join(presetsDir, name);
@@ -104,10 +105,11 @@ async function deletePreset(name: string): Promise<void> {
   } catch (error) {
     if (error instanceof Error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
       console.error(`\n${YELLOW}Error:${RESET} Preset "${name}" not found.\n`);
+      process.exit(EXIT_USER_ERROR);
     } else {
       console.error(`\n${YELLOW}Error:${RESET} ${error instanceof Error ? error.message : String(error)}\n`);
+      process.exit(EXIT_SYSTEM_ERROR);
     }
-    process.exit(1);
   }
 }
 
@@ -160,7 +162,7 @@ async function showPresetInfo(name: string): Promise<void> {
     console.log('');
   } catch (error) {
     console.error(`\n${YELLOW}Error:${RESET} ${error instanceof Error ? error.message : String(error)}\n`);
-    process.exit(1);
+    process.exit(EXIT_SYSTEM_ERROR);
   }
 }
 
@@ -176,7 +178,7 @@ export async function handlePresetCommand(args: string[]): Promise<void> {
       if (!presetName) {
         console.error('\nError: Preset name is required\n');
         console.error('Usage: ccr preset export <name> [--output <path>] [--description <text>] [--author <name>] [--tags <tags>]\n');
-        process.exit(1);
+        process.exit(EXIT_USER_ERROR);
       }
 
       // Parse options
@@ -203,7 +205,7 @@ export async function handlePresetCommand(args: string[]): Promise<void> {
       if (!source) {
         console.error('\nError: Preset source is required\n');
         console.error('Usage: ccr preset install <file | url | name>\n');
-        process.exit(1);
+        process.exit(EXIT_USER_ERROR);
       }
 
       await installPresetCli(source, {});
@@ -220,7 +222,7 @@ export async function handlePresetCommand(args: string[]): Promise<void> {
       if (!deleteName) {
         console.error('\nError: Preset name is required\n');
         console.error('Usage: ccr preset delete <name>\n');
-        process.exit(1);
+        process.exit(EXIT_USER_ERROR);
       }
       await deletePreset(deleteName);
       break;
@@ -230,7 +232,7 @@ export async function handlePresetCommand(args: string[]): Promise<void> {
       if (!infoName) {
         console.error('\nError: Preset name is required\n');
         console.error('Usage: ccr preset info <name>\n');
-        process.exit(1);
+        process.exit(EXIT_USER_ERROR);
       }
       await showPresetInfo(infoName);
       break;
@@ -243,6 +245,6 @@ export async function handlePresetCommand(args: string[]): Promise<void> {
       console.error('  ccr preset list              List installed presets');
       console.error('  ccr preset info <name>        Show preset information');
       console.error('  ccr preset delete <name>      Delete a preset\n');
-      process.exit(1);
+      process.exit(EXIT_USER_ERROR);
   }
 }

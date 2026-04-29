@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { select, input, confirm } from '@inquirer/prompts';
+import { EXIT_CONFIG_ERROR } from './errors';
 
 // ANSI color codes
 const RESET = "\x1B[0m";
@@ -457,6 +458,6 @@ export async function runModelSelector(): Promise<void> {
     displayCurrentConfig(config);
   } catch (error) {
     console.error(`${YELLOW}Error:${RESET}`, error instanceof Error ? error.message : String(error));
-    process.exit(1);
+    process.exit(EXIT_CONFIG_ERROR);
   }
 }

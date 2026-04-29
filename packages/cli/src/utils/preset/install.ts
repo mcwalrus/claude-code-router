@@ -19,6 +19,7 @@ import {
   UserInputValues,
 } from '@CCR/shared';
 import { collectUserInputs } from '../prompt/schema-input';
+import { EXIT_SYSTEM_ERROR } from '../errors';
 
 // Re-export loadPreset
 export { loadPresetShared as loadPreset };
@@ -243,6 +244,6 @@ export async function installPresetCli(
 
   } catch (error) {
     console.error(`\n${YELLOW}Failed to install preset:${RESET} ${error instanceof Error ? error.message : String(error)}`);
-    process.exit(1);
+    process.exit(EXIT_SYSTEM_ERROR);
   }
 }

@@ -5,6 +5,7 @@
 
 import { installPresetFromMarket } from './preset/install-github';
 import { applyPresetCli } from './preset/install';
+import { EXIT_USER_ERROR, EXIT_SYSTEM_ERROR } from './errors';
 
 // ANSI color codes
 const RESET = "\x1B[0m";
@@ -28,7 +29,7 @@ export async function handleInstallCommand(presetName: string): Promise<void> {
       console.error('  ccr install my-preset');
       console.error('  ccr install awesome-preset\n');
       console.error(`${DIM}Note: Preset must exist in the official marketplace.${RESET}\n`);
-      process.exit(1);
+      process.exit(EXIT_USER_ERROR);
     }
 
     console.log(`${BOLDCYAN}Installing preset:${RESET} ${presetName}\n`);
@@ -45,6 +46,6 @@ export async function handleInstallCommand(presetName: string): Promise<void> {
 
   } catch (error) {
     console.error(`\n${BOLDYELLOW}Failed to install preset:${RESET} ${error instanceof Error ? error.message : String(error)}\n`);
-    process.exit(1);
+    process.exit(EXIT_SYSTEM_ERROR);
   }
 }

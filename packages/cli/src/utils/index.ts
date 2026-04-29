@@ -20,7 +20,7 @@ import { checkForUpdates, performUpdate } from "./update";
 import { version } from "../../package.json";
 import { spawn } from "child_process";
 import {cleanupPidFile, isServiceRunning} from "./processCheck";
-import { attachSpawnErrorHandler, printError } from "./errors";
+import { attachSpawnErrorHandler, printError, EXIT_CONFIG_ERROR, EXIT_SYSTEM_ERROR } from "./errors";
 
 // Function to interpolate environment variables in config values
 const interpolateEnvVars = (obj: any): any => {
@@ -85,7 +85,7 @@ export const readConfigFile = async () => {
     configPath = await resolveConfigFile();
   } catch (err: any) {
     console.error(err.message);
-    process.exit(1);
+    process.exit(EXIT_CONFIG_ERROR);
     return;
   }
 
@@ -96,7 +96,7 @@ export const readConfigFile = async () => {
     if (errors.length > 0) {
       console.error(`Failed to parse config file at ${configPath}`);
       errors.slice(0, 5).forEach((e) => console.error(`  offset ${e.offset}: error code ${e.error}`));
-      process.exit(1);
+      process.exit(EXIT_CONFIG_ERROR);
     }
     return interpolateEnvVars(parsedConfig);
   } catch (readError: any) {
@@ -111,12 +111,12 @@ export const readConfigFile = async () => {
         return interpolateEnvVars(parsed ?? {});
       } catch (error) {
         console.error("Failed to create default configuration:", error instanceof Error ? error.message : String(error));
-        process.exit(1);
+        process.exit(EXIT_SYSTEM_ERROR);
       }
     } else {
       console.error(`Failed to read config file at ${configPath!}`);
       console.error("Error details:", readError.message);
-      process.exit(1);
+      process.exit(EXIT_CONFIG_ERROR);
     }
   }
 };

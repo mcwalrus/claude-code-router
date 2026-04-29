@@ -18,7 +18,7 @@ import { join } from "path";
 import { parseStatusLineData, StatusLineInput } from "./utils/statusline";
 import {handlePresetCommand} from "./utils/preset";
 import { handleInstallCommand } from "./utils/installCommand";
-import { attachSpawnErrorHandler, printError, EXIT_CONFIG_ERROR, EXIT_SERVICE_ERROR, EXIT_SYSTEM_ERROR } from "./utils/errors";
+import { attachSpawnErrorHandler, printError, EXIT_USER_ERROR, EXIT_CONFIG_ERROR, EXIT_SERVICE_ERROR, EXIT_SYSTEM_ERROR } from "./utils/errors";
 
 
 const command = process.argv[2];
@@ -78,6 +78,13 @@ Examples:
   eval "$(ccr activate)"         # Apply to current session
   ccr activate --write           # Persist to ~/.zshrc / ~/.bashrc for all future sessions
   ccr ui
+
+Exit codes:
+  0  Success
+  1  User error (bad arguments or invalid input)
+  2  Config error (missing or corrupt config.json)
+  3  Service error (daemon not running or port conflict)
+  4  System error (filesystem, spawn, or network failure)
 `;
 
 async function waitForService(
@@ -203,7 +210,7 @@ async function main() {
     } else {
       // Not a preset nor a known command
       console.log(HELP_TEXT);
-      process.exit(1);
+      process.exit(EXIT_USER_ERROR);
     }
   }
 
@@ -457,7 +464,7 @@ async function main() {
       break;
     default:
       console.log(HELP_TEXT);
-      process.exit(1);
+      process.exit(EXIT_USER_ERROR);
   }
 }
 
