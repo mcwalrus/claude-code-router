@@ -1,7 +1,37 @@
 ---
 title: "Claude Code Router — Gascity E2E Docker Integration"
 created: 2026-04-29
-poured: []
+poured:
+  - ccr-mol-w844
+  - ccr-mol-oowv
+  - ccr-mol-0emv
+  - ccr-mol-wb8o
+  - ccr-mol-m18b
+  - ccr-mol-bm2f
+  - ccr-mol-83jt
+  - ccr-mol-9phk
+  - ccr-mol-s3ta
+  - ccr-mol-5jr9
+  - ccr-mol-z22p
+  - ccr-mol-dwj9
+  - ccr-mol-ddsg
+  - ccr-mol-v0zx
+  - ccr-mol-tn2c
+  - ccr-mol-2vja
+  - ccr-mol-rhfu
+  - ccr-mol-jx8p
+  - ccr-mol-wxnn
+  - ccr-mol-kw4o
+  - ccr-mol-ygrw
+  - ccr-mol-b3jh
+  - ccr-mol-4w5n
+  - ccr-mol-s5c4
+  - ccr-mol-1ume
+  - ccr-mol-mw5i
+  - ccr-mol-xc3j
+  - ccr-mol-2l2r
+  - ccr-mol-se12
+  - ccr-mol-e8hm
 iteration: 1
 auto_discovery: false
 auto_learnings: false
