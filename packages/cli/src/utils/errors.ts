@@ -1,3 +1,5 @@
+import type { ChildProcess } from "node:child_process";
+
 export const EXIT_OK = 0;
 export const EXIT_USER_ERROR = 1;
 export const EXIT_CONFIG_ERROR = 2;
@@ -24,4 +26,20 @@ export function printError(
     process.stderr.write(`    ${DIM}→ ${hint}${RESET}\n`);
   }
   process.stderr.write("\n");
+}
+
+export function attachSpawnErrorHandler(
+  proc: ChildProcess,
+  label: string,
+  options?: { hint?: string; onError?: () => void }
+): void {
+  proc.on("error", () => {
+    options?.onError?.();
+    printError(
+      "system",
+      `Failed to start ${label}`,
+      options?.hint ?? "Check logs at ~/.claude-code-router/logs/"
+    );
+    process.exit(EXIT_SYSTEM_ERROR);
+  });
 }

@@ -20,6 +20,7 @@ import { checkForUpdates, performUpdate } from "./update";
 import { version } from "../../package.json";
 import { spawn } from "child_process";
 import {cleanupPidFile, isServiceRunning} from "./processCheck";
+import { attachSpawnErrorHandler } from "./errors";
 
 // Function to interpolate environment variables in config values
 const interpolateEnvVars = (obj: any): any => {
@@ -227,10 +228,7 @@ export const restartService = async () => {
     stdio: "ignore",
   });
 
-  startProcess.on("error", (error) => {
-    console.error("Failed to start service:", error);
-    throw error;
-  });
+  attachSpawnErrorHandler(startProcess, "CCR server");
 
   startProcess.unref();
   console.log("✅ Service started successfully in the background.");

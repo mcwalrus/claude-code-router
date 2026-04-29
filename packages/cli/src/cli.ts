@@ -18,6 +18,7 @@ import { join } from "path";
 import { parseStatusLineData, StatusLineInput } from "./utils/statusline";
 import {handlePresetCommand} from "./utils/preset";
 import { handleInstallCommand } from "./utils/installCommand";
+import { attachSpawnErrorHandler } from "./utils/errors";
 
 
 const command = process.argv[2];
@@ -180,10 +181,7 @@ async function main() {
           stdio: "ignore",
         });
 
-        startProcess.on("error", (error) => {
-          console.error("Failed to start service:", error.message);
-          process.exit(1);
-        });
+        attachSpawnErrorHandler(startProcess, "CCR server");
 
         startProcess.unref();
 
@@ -227,10 +225,7 @@ async function main() {
           detached: true,
           stdio: "ignore",
         });
-        startProcess.on("error", (error) => {
-          console.error("Failed to start service:", error);
-          process.exit(1);
-        });
+        attachSpawnErrorHandler(startProcess, "CCR server");
         startProcess.unref();
         if (await waitForService()) {
           console.log("✅ Service started successfully in the background.");
@@ -315,10 +310,7 @@ async function main() {
           stdio: "ignore",
         });
 
-        startProcess.on("error", (error) => {
-          console.error("Failed to start service:", error.message);
-          process.exit(1);
-        });
+        attachSpawnErrorHandler(startProcess, "CCR server");
 
         startProcess.unref();
 
@@ -346,10 +338,7 @@ async function main() {
           stdio: "ignore",
         });
 
-        startProcess.on("error", (error) => {
-          console.error("Failed to start service:", error.message);
-          process.exit(1);
-        });
+        attachSpawnErrorHandler(startProcess, "CCR server");
 
         startProcess.unref();
 
@@ -395,13 +384,7 @@ async function main() {
               stdio: "ignore",
             });
 
-            restartProcess.on("error", (error) => {
-              console.error(
-                "Failed to start service with default config:",
-                error.message
-              );
-              process.exit(1);
-            });
+            attachSpawnErrorHandler(restartProcess, "CCR server (fallback config)");
 
             restartProcess.unref();
 

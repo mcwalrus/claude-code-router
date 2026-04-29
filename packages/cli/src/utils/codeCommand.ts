@@ -6,6 +6,7 @@ import {
   closeService,
 } from "./processCheck";
 import { createEnvVariables } from "./createEnvVariables";
+import { attachSpawnErrorHandler } from "./errors";
 
 export interface PresetConfig {
   noServer?: boolean;
@@ -131,13 +132,9 @@ export async function executeCodeCommand(
     claudeProcess.stdin?.end();
   }
 
-  claudeProcess.on("error", (error) => {
-    console.error("Failed to start claude command:", error.message);
-    console.log(
-      "Make sure Claude Code is installed: npm install -g @anthropic-ai/claude-code"
-    );
-    decrementReferenceCount();
-    process.exit(1);
+  attachSpawnErrorHandler(claudeProcess, "claude command", {
+    hint: "Make sure Claude Code is installed: npm install -g @anthropic-ai/claude-code",
+    onError: decrementReferenceCount,
   });
 
   claudeProcess.on("close", (code) => {
