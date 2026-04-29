@@ -20,7 +20,7 @@ export default defineConfig({
   external: [
     '@fastify/multipart',
     '@fastify/static',
-    '@musistudio/llms',
+    '@mcwalrus/llms',
     'adm-zip',
     'dotenv',
     'json5',
@@ -31,7 +31,7 @@ export default defineConfig({
     'tiktoken',
     'uuid',
   ],
-  noExternal: ['@musistudio/llms'],
+  noExternal: ['@mcwalrus/llms'],
   onSuccess: async () => {
     const tiktokenSource = path.resolve(__dirname, 'node_modules/tiktoken/tiktoken_bg.wasm');
     const tiktokenDest = path.resolve(__dirname, 'dist/tiktoken_bg.wasm');

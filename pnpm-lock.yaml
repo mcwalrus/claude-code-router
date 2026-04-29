@@ -197,13 +197,16 @@ importers:
 
   packages/server:
     dependencies:
+      '@CCR/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@fastify/multipart':
         specifier: ^9.0.0
         version: 9.3.0
       '@fastify/static':
         specifier: ^8.2.0
         version: 8.2.0
-      '@musistudio/llms':
+      '@mcwalrus/llms':
         specifier: workspace:*
         version: link:../core
       adm-zip:
@@ -234,9 +237,6 @@ importers:
         specifier: ^11.1.0
         version: 11.1.0
     devDependencies:
-      '@CCR/shared':
-        specifier: workspace:*
-        version: link:../shared
       '@fastify/swagger':
         specifier: ^9.7.0
         version: 9.7.0

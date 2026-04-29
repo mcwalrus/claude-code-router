@@ -24,7 +24,4 @@ I want you to figure out the safest path to running ccr locally as the proxy on 
 3. Run \`/choo-choo-ralph:spec plans/<goal-name>.md <goal-name>\` — review and resolve all \`<review>\` tags autonomously.
 4. Run \`/choo-choo-ralph:pour <goal-name> choo-choo-ralph\`.
 
-AT NO POINT SHOULD local-proxy COME DOWN. The final step is to provide me with a migration process to follow which will allow me to run it locally through ccr start on the same port, with minimal disruption services. DO NOT ATTEMPT TO PERFORM YOURSELF (OR VIA ANY BEAD AGENT).
-Fewer beads to safety is better.
-
 Process repos in dependency order. Stop after all specs are poured." 2>&1 | "$(dirname "$0")/ralph-format.sh" $VERBOSE_FLAG || true
