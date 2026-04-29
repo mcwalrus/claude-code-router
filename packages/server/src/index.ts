@@ -168,7 +168,15 @@ async function getServer(options: RunOptions = {}) {
     }
   }
 
-  const presets = await listPresets();
+  const rawPresets = await listPresets();
+  // Deduplicate by name — corrupted manifest.name fields can produce duplicates
+  // which cause Fastify FST_ERR_DUPLICATED_ROUTE on startup
+  const seenPresetNames = new Set<string>();
+  const presets = rawPresets.filter(p => {
+    if (seenPresetNames.has(p.name)) return false;
+    seenPresetNames.add(p.name);
+    return true;
+  });
 
   const serverInstance = await createServer({
     jsonPath: CONFIG_FILE,

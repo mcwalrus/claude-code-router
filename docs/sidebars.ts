@@ -62,6 +62,8 @@ const sidebars: SidebarsConfig = {
       items: [
         'server/intro',
         'server/deployment',
+        'server/local-proxy-setup',
+        'server/docker-proxy-setup',
         {
           type: 'category',
           label: 'API Reference',
