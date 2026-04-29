@@ -31,3 +31,6 @@ docs/.docusaurus
 .ccr-native.pid
 .claude-code-router-config.native-bak.json
 .claude-code-router-config.native-bak.jsonc
+
+# Ralph workflow repos
+ralph-*/
