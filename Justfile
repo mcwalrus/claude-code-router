@@ -208,6 +208,41 @@ local-proxy: _check-config
 proxy-stop:
     docker rm -f ccr-local-proxy >/dev/null 2>&1 && echo "Stopped." || echo "Not running."
 
+# Run CCR as a native Node.js process on port 3456.
+# Validates on a staging port before stopping ccr-local-proxy.
+native-proxy: _check-config
+    #!/usr/bin/env sh
+    set -e
+    if [ ! -f packages/server/dist/index.js ]; then
+        echo "Server not built. Run: just build"
+        pnpm build:server
+    fi
+    bash scripts/native-proxy-start.sh
+
+# Stop the native CCR process started by native-proxy
+native-proxy-stop:
+    @bash scripts/native-proxy-stop.sh
+
+# Show status of the native CCR process
+native-proxy-status:
+    #!/usr/bin/env sh
+    if [ ! -f .ccr-native.pid ]; then
+        echo "Not running (no PID file)"
+        exit 0
+    fi
+    pid=$(cat .ccr-native.pid)
+    if kill -0 "$pid" 2>/dev/null; then
+        echo "Running (PID $pid)"
+        curl -sf http://127.0.0.1:3456/health >/dev/null && echo "Health: OK" || echo "Health: FAIL"
+    else
+        echo "Stale PID file (process $pid not found)"
+        rm -f .ccr-native.pid
+    fi
+
+# Stream native proxy logs
+native-proxy-logs:
+    tail -f ~/.claude-code-router/logs/native-proxy.log
+
 # Run a dev container from the current worktree's code.
 # Builds the image if needed, picks a free host port, and mounts the worktree
 # so code changes are live. Does NOT disturb ccr-local-proxy.
