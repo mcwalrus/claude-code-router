@@ -47,7 +47,7 @@ mkdir -p "${CCR_CONFIG_DIR}/logs"
 [ -f "${CCR_CONFIG_DIR}/config.json" ]  && cp "${CCR_CONFIG_DIR}/config.json"  /tmp/ccr-native-bak.json
 [ -f "${CCR_CONFIG_DIR}/config.jsonc" ] && cp "${CCR_CONFIG_DIR}/config.jsonc" /tmp/ccr-native-bak.jsonc
 rm -f "${CCR_CONFIG_DIR}/config.json" "${CCR_CONFIG_DIR}/config.jsonc"
-cp "${LOCAL_CFG}" "${CCR_CONFIG_DIR}/config.jsonc"
+cp "${LOCAL_CFG}" "${CCR_CONFIG_DIR}/config.json"
 
 # ── Cleanup / rollback functions ──────────────────────────────────────────────
 restore_config() {
@@ -65,7 +65,7 @@ restart_docker() {
             -p 3456:3456 \
             -e NODE_ENV=production \
             --env-file .env \
-            -v "$(pwd)/${cfg}:/root/.claude-code-router/config.jsonc:ro" \
+            -v "$(pwd)/${cfg}:/root/.claude-code-router/config.json:ro" \
             ccr:local \
             node /app/packages/server/dist/index.js >/dev/null 2>&1 || true
     fi
