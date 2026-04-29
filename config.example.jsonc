@@ -97,13 +97,10 @@
     }
   ],
 
-  // ── Named Routers profiles ──────────────────────────────────────────────────
-  // Each profile is an independently selectable routing set. The active profile
-  // is chosen per-request via the x-ccr-route HTTP header. "default" is used
-  // when the header is absent or unrecognised.
-  //
-  // To use a single flat router instead, delete the "Routers" block below and
-  // uncomment the "Router" block at the bottom of this file.
+  // ── Named Router profiles (future feature) ─────────────────────────────────
+  // Each profile will be selectable per-request via the x-ccr-route HTTP header.
+  // The server does not yet read this block — it reads the "Router" key below.
+  // Keep Routers.default and Router in sync until named-profile switching ships.
   "Routers": {
     "default": {                        // kimi-k2.6 — used when no x-ccr-route header is sent
       "default":            "together,moonshotai/Kimi-K2.6",
@@ -175,19 +172,19 @@
       "webSearch":          "openrouter,google/gemini-2.5-flash:online",
       "image":              "anthropic,claude-sonnet-4-6"
     }
-  }
+  },
 
-  // ── Option: single flat Router ──────────────────────────────────────────────
-  // To use a single router instead of named profiles, delete the "Routers" block
-  // above and uncomment this block. Both cannot be active at once.
-  //
-  // "Router": {
-  //   "default":    "together,moonshotai/Kimi-K2.6",
-  //   "background": "ollama,qwen2.5-coder:latest",
-  //   "think":      "deepseek,deepseek-reasoner",
-  //   "longContext": "openrouter,google/gemini-2.5-pro-preview",
-  //   "longContextThreshold": 60000,
-  //   "webSearch":  "openrouter,google/gemini-2.5-flash:online",
-  //   "image":      "anthropic,claude-sonnet-4-6"
-  // }
+  // ── Active router (required) ────────────────────────────────────────────────
+  // The server reads this key at startup. Must match Routers.default until
+  // named-profile switching (x-ccr-route header) is implemented in the server.
+  // To switch active profiles today: update both Router and Routers.default, or
+  // just update Router to point at whichever Routers entry you want to use.
+  "Router": {
+    "default":    "together,moonshotai/Kimi-K2.6",
+    "background": "together,moonshotai/Kimi-K2.6",
+    "think":      "together,moonshotai/Kimi-K2.6",
+    "longContext": "together,moonshotai/Kimi-K2.6",
+    "longContextThreshold": 60000,
+    "webSearch":  "together,moonshotai/Kimi-K2.6"
+  }
 }
