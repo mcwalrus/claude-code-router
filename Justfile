@@ -383,6 +383,21 @@ stack-metrics:
     fi
     curl -s http://127.0.0.1:9464/metrics
 
+# ── Hop-Proxy Emulator ────────────────────────────────────────────────────────
+
+# Probe the hop chain: container CCR → host CCR → upstream
+emulator-hop-probe:
+    #!/usr/bin/env sh
+    set -e
+    echo "=== Host CCR health ==="
+    curl -sf http://127.0.0.1:3456/health || { echo "FAIL: host CCR not running. Start with: just native-proxy"; exit 1; }
+    echo "OK"
+    echo "=== Container CCR health (via 3457) ==="
+    curl -sf http://127.0.0.1:3457/health || { echo "FAIL: container CCR not reachable"; exit 1; }
+    echo "OK"
+    echo "=== Hop chain probe ==="
+    echo "Both CCR instances reachable. Chain: Claude Code → :3457 → host :3456 → upstream"
+
 # ── Agent orchestration ───────────────────────────────────────────────────────
 
 # Start a CCR container for a specific agent worktree.
