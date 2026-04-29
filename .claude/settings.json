@@ -1,12 +1,4 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(pnpm *)"
-    ]
-  },
-  "worktree": {
-    "symlinkDirectories": ["node_modules"]
-  },
   "hooks": {
     "PreCompact": [
       {
@@ -29,6 +21,16 @@
         ],
         "matcher": ""
       }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(pnpm *)"
+    ]
+  },
+  "worktree": {
+    "symlinkDirectories": [
+      "node_modules"
     ]
   }
 }
