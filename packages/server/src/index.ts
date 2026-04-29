@@ -80,7 +80,7 @@ async function registerPluginsFromConfig(serverInstance: any, config: any): Prom
           break;
 
         case 'metrics':
-          pluginManager.registerPlugin(metricsPlugin, { enabled, ...options });
+          pluginManager.registerPlugin(metricsPlugin, { enabled, hop: config.PROXY_HOP, ...options });
           break;
 
         default:

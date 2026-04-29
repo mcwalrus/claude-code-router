@@ -18,6 +18,9 @@ interface MetricsOptions extends CCRPluginOptions {
   prefix?: string;
   /** Whether to collect Node.js process metrics (default: true) */
   collectDefault?: boolean;
+  /** Hop label for metrics (e.g. 'local', 'gascity'). Passed explicitly because
+   *  fastify-plugin runs at root scope where configService is not yet decorated. */
+  hop?: string;
 }
 
 /**
@@ -70,7 +73,7 @@ export const metricsPlugin: CCRPlugin = {
       registers: [registry],
     });
 
-    const hop = (fastify.configService?.get("PROXY_HOP") as string) || "local";
+    const hop = opts.hop || (fastify.configService?.get("PROXY_HOP") as string) || "local";
 
     const providerRouteCounter = new Counter({
       name: `${p}_provider_routes_total`,
