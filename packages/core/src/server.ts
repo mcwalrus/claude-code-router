@@ -50,6 +50,33 @@ interface ServerOptions extends FastifyServerOptions {
   initialConfig?: AppConfig;
 }
 
+export function addModelSplitHook(fastify: FastifyInstance): void {
+  fastify.addHook(
+    "preHandler",
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const url = new URL(`http://127.0.0.1${req.url}`);
+      if (url.pathname.endsWith("/v1/messages") && req.body) {
+        try {
+          const body = req.body as any;
+          if (!body || !body.model) {
+            return reply
+              .code(400)
+              .send({ error: "Missing model in request body" });
+          }
+          const [provider, ...model] = body.model.split(",");
+          body.model = model.join(",");
+          req.provider = provider;
+          req.model = model;
+          return;
+        } catch (err) {
+          req.log.error({error: err}, "Error in modelProviderMiddleware:");
+          return reply.code(500).send({ error: "Internal server error" });
+        }
+      }
+    }
+  );
+}
+
 // Application factory
 function createApp(options: FastifyServerOptions = {}): FastifyInstance {
   const fastify = Fastify({
@@ -150,6 +177,7 @@ class Server {
             });
           }
         });
+        addModelSplitHook(fastify);
         await registerApiRoutes(fastify);
       });
       return
@@ -191,6 +219,7 @@ class Server {
           });
         }
       });
+      addModelSplitHook(fastify);
       await registerApiRoutes(fastify);
     }, { prefix: name });
   }
@@ -212,32 +241,6 @@ class Server {
       });
 
       await this.registerNamespace('/')
-
-      this.app.addHook(
-        "preHandler",
-        async (req: FastifyRequest, reply: FastifyReply) => {
-          const url = new URL(`http://127.0.0.1${req.url}`);
-          if (url.pathname.endsWith("/v1/messages") && req.body) {
-            try {
-              const body = req.body as any;
-              if (!body || !body.model) {
-                return reply
-                  .code(400)
-                  .send({ error: "Missing model in request body" });
-              }
-              const [provider, ...model] = body.model.split(",");
-              body.model = model.join(",");
-              req.provider = provider;
-              req.model = model;
-              return;
-            } catch (err) {
-              req.log.error({error: err}, "Error in modelProviderMiddleware:");
-              return reply.code(500).send({ error: "Internal server error" });
-            }
-          }
-        }
-      );
-
 
       const address = await this.app.listen({
         port: parseInt(this.configService.get("PORT") || "3000", 10),

@@ -5,6 +5,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@CCR/shared': resolve(__dirname, 'packages/shared/src/index.ts'),
+      '@': resolve(__dirname, 'packages/core/src'),
     },
   },
   test: {
