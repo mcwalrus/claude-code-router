@@ -26,3 +26,8 @@ docs/.docusaurus
 *.db
 .beads-credential-key
 .goss-cache/
+
+# native-proxy runtime files
+.ccr-native.pid
+.claude-code-router-config.native-bak.json
+.claude-code-router-config.native-bak.jsonc
