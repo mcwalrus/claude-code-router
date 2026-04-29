@@ -20,7 +20,7 @@ import { checkForUpdates, performUpdate } from "./update";
 import { version } from "../../package.json";
 import { spawn } from "child_process";
 import {cleanupPidFile, isServiceRunning} from "./processCheck";
-import { attachSpawnErrorHandler } from "./errors";
+import { attachSpawnErrorHandler, printError } from "./errors";
 
 // Function to interpolate environment variables in config values
 const interpolateEnvVars = (obj: any): any => {
@@ -109,8 +109,8 @@ export const readConfigFile = async () => {
         const errors: ParseError[] = [];
         const parsed = parseJsonc(EXAMPLE_CONFIG_CONTENT, errors);
         return interpolateEnvVars(parsed ?? {});
-      } catch (error: any) {
-        console.error("Failed to create default configuration:", error.message);
+      } catch (error) {
+        console.error("Failed to create default configuration:", error instanceof Error ? error.message : String(error));
         process.exit(1);
       }
     } else {
@@ -150,7 +150,7 @@ export const backupConfigFile = async () => {
 
     return backupPath;
   } catch (error) {
-    console.error("Failed to backup config file:", error);
+    printError("system", "Failed to backup config file", error instanceof Error ? error.message : String(error));
   }
   return null;
 };

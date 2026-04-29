@@ -154,8 +154,8 @@ export async function applyPresetCli(
     console.log(`\n${GREEN}Use this preset:${RESET} ccr ${presetName} "your prompt"`);
     console.log(`${DIM}Note: Configuration is stored in the manifest file${RESET}\n`);
 
-  } catch (error: any) {
-    console.error(`\n${YELLOW}Error applying preset:${RESET} ${error.message}`);
+  } catch (error) {
+    console.error(`\n${YELLOW}Error applying preset:${RESET} ${error instanceof Error ? error.message : String(error)}`);
     throw error;
   }
 }
@@ -241,8 +241,8 @@ export async function installPresetCli(
       await applyPresetCli(presetName, preset);
     }
 
-  } catch (error: any) {
-    console.error(`\n${YELLOW}Failed to install preset:${RESET} ${error.message}`);
+  } catch (error) {
+    console.error(`\n${YELLOW}Failed to install preset:${RESET} ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
   }
 }

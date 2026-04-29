@@ -101,11 +101,11 @@ async function deletePreset(name: string): Promise<void> {
     // Recursively delete entire directory
     await fs.rm(presetDir, { recursive: true, force: true });
     console.log(`\n${GREEN}✓${RESET} Preset "${name}" deleted.\n`);
-  } catch (error: any) {
-    if (error.code === 'ENOENT') {
+  } catch (error) {
+    if (error instanceof Error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
       console.error(`\n${YELLOW}Error:${RESET} Preset "${name}" not found.\n`);
     } else {
-      console.error(`\n${YELLOW}Error:${RESET} ${error.message}\n`);
+      console.error(`\n${YELLOW}Error:${RESET} ${error instanceof Error ? error.message : String(error)}\n`);
     }
     process.exit(1);
   }
@@ -158,8 +158,8 @@ async function showPresetInfo(name: string): Promise<void> {
     }
 
     console.log('');
-  } catch (error: any) {
-    console.error(`\n${YELLOW}Error:${RESET} ${error.message}\n`);
+  } catch (error) {
+    console.error(`\n${YELLOW}Error:${RESET} ${error instanceof Error ? error.message : String(error)}\n`);
     process.exit(1);
   }
 }

@@ -100,8 +100,8 @@ export function cleanupPidFile() {
         try {
             const fs = require('fs');
             fs.unlinkSync(PID_FILE);
-        } catch (e) {
-            // Ignore cleanup errors
+        } catch (_e) {
+            console.warn("Could not remove PID file:", PID_FILE);
         }
     }
 }
@@ -146,8 +146,8 @@ export async function closeService() {
             try {
                 // Kill the service process
                 process.kill(pid, 'SIGTERM');
-            } catch (e) {
-                // Ignore kill errors
+            } catch (_e) {
+                console.warn("Could not signal process to stop — it may have already exited");
             }
         }
     }

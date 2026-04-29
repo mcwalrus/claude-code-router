@@ -204,7 +204,7 @@ async function executeScript(scriptPath: string, variables: Record<string, strin
         // Default to empty string
         return "";
     } catch (error) {
-        console.error(`Error executing script ${scriptPath}:`, error);
+        console.error(`Error executing script ${scriptPath}:`, error instanceof Error ? error.message : String(error));
         return "";
     }
 }
@@ -437,14 +437,16 @@ async function getTokenSpeedStats(sessionId: string): Promise<{
         // Check if temp directory exists
         try {
             await fs.access(tempDir);
-        } catch {
+        } catch (_e) {
+            // Temp dir not yet created — no stats available yet
             return null;
         }
 
         const statsFilePath = path.join(tempDir, `session-${sessionId}.json`);
         try {
             await fs.access(statsFilePath);
-        } catch {
+        } catch (_e) {
+            // Stats file not yet written for this session
             return null;
         }
 
@@ -490,7 +492,8 @@ async function getProjectThemeConfig(): Promise<{ theme: StatusLineThemeConfig |
         // Check if configuration file exists
         try {
             await fs.access(configPath);
-        } catch {
+        } catch (_e) {
+            // Config file not found — use default theme
             return { theme: null, style: 'default' };
         }
 
@@ -507,9 +510,8 @@ async function getProjectThemeConfig(): Promise<{ theme: StatusLineThemeConfig |
                 return { theme: config.StatusLine[currentStyle], style: currentStyle };
             }
         }
-    } catch (error) {
-        // Return null if reading fails
-        // console.error("Failed to read theme config:", error);
+    } catch (_e) {
+        // Silent: theme config read failure falls back to default theme
     }
 
     return { theme: null, style: 'default' };
@@ -642,8 +644,8 @@ export async function parseStatusLineData(input: StatusLineInput, presetName?: s
             })
                 .toString()
                 .trim();
-        } catch (error) {
-            // If not a Git repository or retrieval fails, ignore error
+        } catch (_e) {
+            // Not a git repo or git not installed — branch display skipped
         }
 
         // Read last assistant message from transcript_path file
@@ -667,8 +669,8 @@ export async function parseStatusLineData(input: StatusLineInput, presetName?: s
                     }
                     break;
                 }
-            } catch (parseError) {
-                // Ignore parse errors, continue searching
+            } catch (_e) {
+                // Malformed JSONL line — skip and continue searching
                 continue;
             }
         }
@@ -683,7 +685,8 @@ export async function parseStatusLineData(input: StatusLineInput, presetName?: s
                 // Check if project configuration file exists, if not use user home directory configuration file
                 try {
                     await fs.access(projectConfigPath);
-                } catch {
+                } catch (_e) {
+                    // No project-level config — fall back to global config
                     configPath = CONFIG_FILE;
                 }
 
@@ -698,8 +701,8 @@ export async function parseStatusLineData(input: StatusLineInput, presetName?: s
                         model = defaultModel.trim();
                     }
                 }
-            } catch (configError) {
-                // If configuration file reading fails, ignore error
+            } catch (_e) {
+                // Config unreadable — model name will fall through to input fallback
             }
         }
 
@@ -779,8 +782,8 @@ export async function parseStatusLineData(input: StatusLineInput, presetName?: s
         } else {
             return await renderDefaultStyle(theme, variables);
         }
-    } catch (error) {
-        // Return empty string on error
+    } catch (_e) {
+        // Silent: statusline render failure returns empty string (non-interactive display)
         return "";
     }
 }

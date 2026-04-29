@@ -97,8 +97,8 @@ export async function exportPresetCli(
     console.log(`  2. Upload to GitHub Gist or your repository`);
     console.log(`  3. Others can install with: ${GREEN}ccr preset install <directory>${RESET}\n`);
 
-  } catch (error: any) {
-    console.error(`\n${YELLOW}Error exporting preset:${RESET} ${error.message}`);
+  } catch (error) {
+    console.error(`\n${YELLOW}Error exporting preset:${RESET} ${error instanceof Error ? error.message : String(error)}`);
     throw error;
   }
 }

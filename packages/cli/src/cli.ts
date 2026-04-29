@@ -18,7 +18,7 @@ import { join } from "path";
 import { parseStatusLineData, StatusLineInput } from "./utils/statusline";
 import {handlePresetCommand} from "./utils/preset";
 import { handleInstallCommand } from "./utils/installCommand";
-import { attachSpawnErrorHandler, printError, EXIT_SERVICE_ERROR, EXIT_SYSTEM_ERROR } from "./utils/errors";
+import { attachSpawnErrorHandler, printError, EXIT_CONFIG_ERROR, EXIT_SERVICE_ERROR, EXIT_SYSTEM_ERROR } from "./utils/errors";
 
 
 const command = process.argv[2];
@@ -188,16 +188,14 @@ async function main() {
         if (await waitForService()) {
           executeCodeCommand(codeArgs, presetConfig, envOverrides, command);
         } else {
-          console.error(
-            "Service startup timeout, please manually run `ccr start` to start the service"
-          );
-          process.exit(1);
+          printError("service", "Service startup timeout", "Run: ccr start");
+          process.exit(EXIT_SERVICE_ERROR);
         }
       } else {
         // Service is already running or no need to start server
         if (shouldStartServer && !isRunning) {
-          console.error("Service is not running. Please start it first with `ccr start`");
-          process.exit(1);
+          printError("service", "Service is not running", "Run: ccr start");
+          process.exit(EXIT_SERVICE_ERROR);
         }
         executeCodeCommand(codeArgs, presetConfig, envOverrides, command);
       }
@@ -230,10 +228,8 @@ async function main() {
         if (await waitForService()) {
           console.log("✅ Service started successfully in the background.");
         } else {
-          console.error(
-            "Service startup timeout. Check logs at ~/.claude-code-router/logs/"
-          );
-          process.exit(1);
+          printError("service", "Service startup timeout", "Check logs at ~/.claude-code-router/logs/");
+          process.exit(EXIT_SERVICE_ERROR);
         }
       }
       break;
@@ -290,8 +286,8 @@ async function main() {
           const statusLine = await parseStatusLineData(input, presetName);
           console.log(statusLine);
         } catch (error) {
-          console.error("Error parsing status line data:", error);
-          process.exit(1);
+          printError("system", "Error parsing status line data", error instanceof Error ? error.message : String(error));
+          process.exit(EXIT_SYSTEM_ERROR);
         }
       });
       break;
@@ -336,10 +332,8 @@ async function main() {
           const codeArgs = process.argv.slice(3);
           executeCodeCommand(codeArgs);
         } else {
-          console.error(
-            "Service startup timeout, please manually run `ccr start` to start the service"
-          );
-          process.exit(1);
+          printError("service", "Service startup timeout", "Run: ccr start");
+          process.exit(EXIT_SERVICE_ERROR);
         }
       } else {
         const codeArgs = process.argv.slice(3);
@@ -408,17 +402,12 @@ async function main() {
 
             if (!(await waitForService(15000))) {
               // Wait a bit longer for the first start
-              console.error(
-                "Service startup still failing. Please manually run `ccr start` to start the service and check the logs."
-              );
-              process.exit(1);
+              printError("service", "Service startup still failing", "Run: ccr start, then check logs at ~/.claude-code-router/logs/");
+              process.exit(EXIT_SERVICE_ERROR);
             }
-          } catch (error: any) {
-            console.error(
-              "Failed to create default configuration:",
-              error.message
-            );
-            process.exit(1);
+          } catch (error) {
+            printError("config", "Failed to create default configuration", error instanceof Error ? error.message : String(error));
+            process.exit(EXIT_CONFIG_ERROR);
           }
         }
       }
@@ -445,14 +434,13 @@ async function main() {
         // Linux
         openCommand = `xdg-open ${uiUrl}`;
       } else {
-        console.error("Unsupported platform for opening browser");
-        process.exit(1);
+        printError("system", "Unsupported platform for opening browser", `Open manually: ${uiUrl}`);
+        process.exit(EXIT_SYSTEM_ERROR);
       }
 
       exec(openCommand, (error) => {
         if (error) {
-          console.error("Failed to open browser:", error.message);
-          process.exit(1);
+          printError("system", "Could not open browser automatically", `Open manually: ${uiUrl}`);
         }
       });
       break;

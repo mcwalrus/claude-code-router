@@ -43,8 +43,8 @@ export async function handleInstallCommand(presetName: string): Promise<void> {
       console.log(`\n${BOLDGREEN}✓ Preset installation completed!${RESET}\n`);
     }
 
-  } catch (error: any) {
-    console.error(`\n${BOLDYELLOW}Failed to install preset:${RESET} ${error.message}\n`);
+  } catch (error) {
+    console.error(`\n${BOLDYELLOW}Failed to install preset:${RESET} ${error instanceof Error ? error.message : String(error)}\n`);
     process.exit(1);
   }
 }

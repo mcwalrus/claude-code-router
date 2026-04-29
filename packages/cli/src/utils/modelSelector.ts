@@ -455,8 +455,8 @@ export async function runModelSelector(): Promise<void> {
     }
     
     displayCurrentConfig(config);
-  } catch (error: any) {
-    console.error(`${YELLOW}Error:${RESET}`, error.message);
+  } catch (error) {
+    console.error(`${YELLOW}Error:${RESET}`, error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }

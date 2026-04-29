@@ -97,7 +97,7 @@ export async function executeCodeCommand(
         } as ClaudeSettingsFlag['env']
       };
     } catch (error) {
-      console.error(`Failed to parse --settings argument: ${args[existingSettingsIdx + 1]}`, error);
+      console.error(`Failed to parse --settings argument: ${args[existingSettingsIdx + 1]}`, error instanceof Error ? error.message : String(error));
     }
     const settingsFile = await getSettingsPath(`${JSON.stringify(settingsFlag)}`);
     args[existingSettingsIdx + 1] = settingsFile;
