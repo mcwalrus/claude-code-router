@@ -1,39 +1,61 @@
-// config.example.jsonc — copy to ~/.claude-code-router/config.json and fill in your values.
-// Comments are stripped at load time; the actual config.json also supports them.
-// API keys are read from environment variables at startup — never hard-code them here.
+// config.example.jsonc — copy to config.jsonc (or ~/.claude-code-router/config.json) and fill in your values.
+// Comments are stripped at load time. API keys use $VAR or ${VAR} — never hard-code them here.
+// Run `just setup` to create config.jsonc from this file automatically.
 {
-  // Shared secret that clients must send in x-api-key or Authorization: Bearer.
+  // Shared secret clients must send in x-api-key or Authorization: Bearer.
   // Required when HOST is not 127.0.0.1.
   "APIKEY": "your-secret-key",
   "HOST": "0.0.0.0",
-  "PORT": "3456",
-  "LOG_LEVEL": "info",        // fatal | error | warn | info | debug | trace
+  "PORT": 3456,                 // must be an integer, not a string
+  "LOG_LEVEL": "info",          // fatal | error | warn | info | debug | trace
   "API_TIMEOUT_MS": 600000,
   "NON_INTERACTIVE_MODE": false,
 
   // ── Proxy hop (chain through another CCR instance) ─────────────────────────
-  // When CCR runs inside a container (e.g. gascity-runner) and should forward
-  // to a local CCR on the host instead of hitting upstream directly:
-  //   PROXY_HOP: "gascity"   — emitted as the `hop` Prometheus label
-  //   Providers still declare the *final* upstream; the outer host CCR routes there.
-  //
-  // Chain:  Claude Code → gascity CCR (Docker, :3456 internally / :3457 host)
-  //         → host CCR (:3456) → upstream provider
-  //
-  // In the gascity config, point the provider at the host CCR:
-  //   "api_base_url": "http://host.docker.internal:3456/v1/messages"
-  //
+  // When CCR runs inside a container and should forward to a host CCR instead
+  // of hitting upstream directly. See docs/server/advanced/proxy-chains.md.
   // "PROXY_HOP": "gascity",
 
   // ── Providers ──────────────────────────────────────────────────────────────
-  // Declare one entry per API backend. api_key values use $VAR or ${VAR} syntax
-  // and are injected from environment variables at startup.
-  // Providers listed here but not referenced in Router/Routers are still
-  // available for manual selection via /model provider,model-name in Claude Code.
+  // Declare one entry per API backend. Providers not referenced in Routers are
+  // still available for manual selection via /model in Claude Code.
   "Providers": [
     {
-      // Direct Anthropic API — preserves native request/response format.
-      // Use this to route to Claude models without an intermediate gateway.
+      // Together.xyz — OpenAI-compatible gateway hosting many open models
+      "name": "together",
+      "api_base_url": "https://api.together.xyz/v1/chat/completions",
+      "api_key": "$TOGETHER_API_KEY",
+      "models": [
+        "moonshotai/Kimi-K2.6",
+        "deepseek-ai/DeepSeek-V4-Pro",
+        "zai-org/GLM-5.1",
+        "MiniMaxAI/MiniMax-M2.7",
+        "Qwen/Qwen3.5-397B-A17B"
+      ],
+      "transformer": { "use": ["openai"] }
+    },
+    {
+      // Google Gemini native API — 1M-token context window
+      "name": "gemini",
+      "api_base_url": "https://generativelanguage.googleapis.com/v1beta/models/",
+      "api_key": "$GEMINI_API_KEY",
+      "models": [
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
+        "gemini-3-flash-preview",
+        "gemini-3.1-pro-preview"
+      ],
+      "transformer": { "use": ["gemini"] }
+    },
+    {
+      // xAI — Grok models with large context window
+      "name": "xai",
+      "api_base_url": "https://api.x.ai/v1/chat/completions",
+      "api_key": "$XAI_API_KEY",
+      "models": ["grok-4-1-fast-reasoning"]
+    },
+    {
+      // Anthropic — direct API, preserves native request/response format
       "name": "anthropic",
       "api_base_url": "https://api.anthropic.com/v1/messages",
       "api_key": "$ANTHROPIC_API_KEY",
@@ -45,7 +67,7 @@
       "transformer": { "use": ["anthropic"] }
     },
     {
-      // OpenRouter — multi-model gateway; append :online suffix for web-search grounding
+      // OpenRouter — multi-model gateway; append :online for web-search grounding
       "name": "openrouter",
       "api_base_url": "https://openrouter.ai/api/v1/chat/completions",
       "api_key": "$OPENROUTER_API_KEY",
@@ -56,7 +78,7 @@
       "transformer": { "use": ["openrouter"] }
     },
     {
-      // DeepSeek — strong reasoning at low cost; deepseek-reasoner for Plan Mode
+      // DeepSeek — strong reasoning at low cost
       "name": "deepseek",
       "api_base_url": "https://api.deepseek.com/chat/completions",
       "api_key": "$DEEPSEEK_API_KEY",
@@ -75,50 +97,97 @@
     }
   ],
 
-  // ── Option A: single Router ─────────────────────────────────────────────────
-  // Maps each task-type slot to a "provider,model" string. Slots are independent —
-  // each can use a different provider to trade off cost, speed, and capability.
+  // ── Named Routers profiles ──────────────────────────────────────────────────
+  // Each profile is an independently selectable routing set. The active profile
+  // is chosen per-request via the x-ccr-route HTTP header. "default" is used
+  // when the header is absent or unrecognised.
   //
-  // To switch to named profiles, delete the entire "Router" block below and
-  // uncomment the "Routers" block in Option B. Both cannot be active at once.
-  "Router": {
-    "default":    "anthropic,claude-sonnet-4-6",            // balanced — general tasks
-    "background": "ollama,qwen2.5-coder:latest",            // free — indexing, summaries
-    "think":      "deepseek,deepseek-reasoner",             // cheap reasoning — Plan Mode
-    "longContext": "openrouter,google/gemini-2.5-pro-preview", // 1M-token context window
-    "longContextThreshold": 60000,
-    "webSearch":  "openrouter,google/gemini-2.5-flash:online", // native search grounding
-    "image":      "anthropic,claude-sonnet-4-6"             // vision / multimodal
+  // To use a single flat router instead, delete the "Routers" block below and
+  // uncomment the "Router" block at the bottom of this file.
+  "Routers": {
+    "default": {                        // kimi-k2.6 — used when no x-ccr-route header is sent
+      "default":            "together,moonshotai/Kimi-K2.6",
+      "background":         "together,moonshotai/Kimi-K2.6",
+      "think":              "together,moonshotai/Kimi-K2.6",
+      "longContext":        "together,moonshotai/Kimi-K2.6",
+      "webSearch":          "together,moonshotai/Kimi-K2.6",
+      "longContextThreshold": 60000
+    },
+    "deepseek-v4-pro": {
+      "default":            "together,deepseek-ai/DeepSeek-V4-Pro",
+      "background":         "together,deepseek-ai/DeepSeek-V4-Pro",
+      "think":              "together,deepseek-ai/DeepSeek-V4-Pro",
+      "longContext":        "together,deepseek-ai/DeepSeek-V4-Pro",
+      "webSearch":          "together,deepseek-ai/DeepSeek-V4-Pro",
+      "longContextThreshold": 60000
+    },
+    "gemini-2.5": {
+      "default":            "gemini,gemini-2.5-pro",
+      "background":         "gemini,gemini-2.5-flash",
+      "think":              "gemini,gemini-2.5-pro",
+      "longContext":        "gemini,gemini-2.5-pro",
+      "longContextThreshold": 60000
+    },
+    "gemini-3": {
+      "default":            "gemini,gemini-3.1-pro-preview",
+      "background":         "gemini,gemini-3-flash-preview",
+      "think":              "gemini,gemini-3.1-pro-preview",
+      "longContext":        "gemini,gemini-3.1-pro-preview",
+      "longContextThreshold": 60000
+    },
+    "glm-5.1": {
+      "default":            "together,zai-org/GLM-5.1",
+      "background":         "together,zai-org/GLM-5.1",
+      "think":              "together,zai-org/GLM-5.1",
+      "longContext":        "together,zai-org/GLM-5.1",
+      "webSearch":          "together,zai-org/GLM-5.1",
+      "longContextThreshold": 60000
+    },
+    "grok-4.1-fast": {
+      "default":            "xai,grok-4-1-fast-reasoning",
+      "background":         "xai,grok-4-1-fast-reasoning",
+      "think":              "xai,grok-4-1-fast-reasoning",
+      "longContext":        "xai,grok-4-1-fast-reasoning",
+      "longContextThreshold": 200000
+    },
+    "minimax-m2.7": {
+      "default":            "together,MiniMaxAI/MiniMax-M2.7",
+      "background":         "together,MiniMaxAI/MiniMax-M2.7",
+      "think":              "together,MiniMaxAI/MiniMax-M2.7",
+      "longContext":        "together,MiniMaxAI/MiniMax-M2.7",
+      "webSearch":          "together,MiniMaxAI/MiniMax-M2.7",
+      "longContextThreshold": 60000
+    },
+    "qwen-3.5": {
+      "default":            "together,Qwen/Qwen3.5-397B-A17B",
+      "background":         "together,Qwen/Qwen3.5-397B-A17B",
+      "think":              "together,Qwen/Qwen3.5-397B-A17B",
+      "longContext":        "together,Qwen/Qwen3.5-397B-A17B",
+      "webSearch":          "together,Qwen/Qwen3.5-397B-A17B",
+      "longContextThreshold": 60000
+    },
+    "mixed": {              // example profile mixing providers by task type
+      "default":            "together,moonshotai/Kimi-K2.6",
+      "background":         "ollama,qwen2.5-coder:latest",
+      "think":              "deepseek,deepseek-reasoner",
+      "longContext":        "openrouter,google/gemini-2.5-pro-preview",
+      "longContextThreshold": 60000,
+      "webSearch":          "openrouter,google/gemini-2.5-flash:online",
+      "image":              "anthropic,claude-sonnet-4-6"
+    }
   }
 
-  // ── Option B: named Routers profiles ───────────────────────────────────────
-  // Use "Routers" to expose independently selectable routing sets. The active
-  // profile is chosen per-request via the x-ccr-route HTTP header.
-  // "default" is required — it is used when the header is absent or unrecognised.
+  // ── Option: single flat Router ──────────────────────────────────────────────
+  // To use a single router instead of named profiles, delete the "Routers" block
+  // above and uncomment this block. Both cannot be active at once.
   //
-  // To activate: delete the "Router" block above, then remove the // from every
-  // line below (each line must be uncommented, including the outer braces).
-  //
-  // "Routers": {
-  //   "default": {                          // used when no x-ccr-route header is sent
-  //     "default":    "anthropic,claude-sonnet-4-6",
-  //     "background": "ollama,qwen2.5-coder:latest",
-  //     "think":      "deepseek,deepseek-reasoner",
-  //     "longContext": "openrouter,google/gemini-2.5-pro-preview",
-  //     "longContextThreshold": 60000,
-  //     "webSearch":  "openrouter,google/gemini-2.5-flash:online",
-  //     "image":      "anthropic,claude-sonnet-4-6"
-  //   },
-  //   "fast": {                             // x-ccr-route: fast  — minimise latency and cost
-  //     "default":    "anthropic,claude-haiku-4-5-20251001",
-  //     "background": "ollama,qwen2.5-coder:latest",
-  //     "think":      "deepseek,deepseek-chat"
-  //   },
-  //   "powerful": {                         // x-ccr-route: powerful  — maximise quality
-  //     "default":    "anthropic,claude-opus-4-7",
-  //     "background": "anthropic,claude-haiku-4-5-20251001",
-  //     "think":      "anthropic,claude-opus-4-7",
-  //     "longContext": "openrouter,google/gemini-2.5-pro-preview"
-  //   }
+  // "Router": {
+  //   "default":    "together,moonshotai/Kimi-K2.6",
+  //   "background": "ollama,qwen2.5-coder:latest",
+  //   "think":      "deepseek,deepseek-reasoner",
+  //   "longContext": "openrouter,google/gemini-2.5-pro-preview",
+  //   "longContextThreshold": 60000,
+  //   "webSearch":  "openrouter,google/gemini-2.5-flash:online",
+  //   "image":      "anthropic,claude-sonnet-4-6"
   // }
 }
