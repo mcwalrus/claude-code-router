@@ -52,7 +52,13 @@
       "mcp__github__list_commits",
       "Bash(bd list *)",
       "Bash(bd ready *)",
-      "Bash(bd *)"
+      "Bash(bd *)",
+      "Bash(cat /Users/max.collier/Projects/Max/sandbox/claude-code-router/.ccr-native.pid)",
+      "Bash(ccr status *)",
+      "Bash(node *)",
+      "mcp__github__search_code",
+      "Bash(find /Users/max.collier/Projects/Max/sandbox/claude-code-router/node_modules/.pnpm/@musistudio+llms@https* -name \"server.js\")",
+      "Bash(BEADS_SKIP_IDENTITY_CHECK=1 bd create --help)"
     ]
   },
   "lsp": [
