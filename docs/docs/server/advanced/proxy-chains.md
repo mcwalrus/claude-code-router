@@ -157,3 +157,80 @@ CCR_PROXY_HOP=edge CCR_PROXY_URL=http://corp-proxy:8080 ccr start
 ```
 
 Here the edge instance routes through the corporate HTTP proxy, and every metric is tagged `hop="edge"`.
+
+## Docker Compose Local Test Stack
+
+The repo ships a `docker-compose.yml` that mirrors the gascity-runner Docker topology, making it easy to validate the full hop chain locally before deploying.
+
+### Chain topology
+
+```
+Claude Code (host)
+  → ccr-hop  (Docker, port 3457 on host / 3456 inside container)
+    → ccr-local  (Docker, port 3456 on host, PROXY_HOP unset)
+      → upstream Anthropic API
+```
+
+Claude Code points its `ANTHROPIC_BASE_URL` at `http://127.0.0.1:3457`. The inner `ccr-hop` container has `PROXY_HOP: "gascity"` and routes all traffic to `http://host.docker.internal:3456` (the `ccr-local` container). `ccr-local` carries the real provider keys and forwards to Anthropic.
+
+### Quick start
+
+```bash
+# 1. Copy and fill in your API keys
+cp config.example.jsonc config.jsonc
+# edit config.jsonc — set APIKEY, Providers.api_key, etc.
+
+# 2. Spin up CCR + hop container + Prometheus
+just stack-up
+
+# 3. Point Claude Code at the hop container
+export ANTHROPIC_BASE_URL=http://127.0.0.1:3457
+export ANTHROPIC_AUTH_TOKEN=hop-secret   # matches APIKEY in docker/hop-config.jsonc
+claude code
+
+# 4. Verify the chain is reachable
+just emulator-hop-probe
+
+# 5. Tear down
+just stack-down
+```
+
+### Hop container config (`docker/hop-config.jsonc`)
+
+The `ccr-hop` service mounts `docker/hop-config.jsonc`:
+
+```jsonc
+{
+  "APIKEY": "hop-secret",
+  "PROXY_HOP": "gascity",
+  "Providers": [
+    {
+      "name": "anthropic",
+      // Points at the host CCR, not the real Anthropic API.
+      "api_base_url": "http://host.docker.internal:3456/v1/messages",
+      "api_key": "hop-secret",
+      "models": ["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"],
+      "transformer": { "use": ["anthropic"] }
+    }
+  ],
+  "Router": {
+    "default": "anthropic,claude-sonnet-4-6"
+  }
+}
+```
+
+`host.docker.internal` resolves to the Docker host on macOS and Windows. On Linux you may need to add `--add-host=host.docker.internal:host-gateway` to the container or use the host's bridge IP directly.
+
+### Prometheus metrics
+
+Prometheus scrapes `ccr-local:9464`. After a few requests you should see:
+
+```promql
+# Traffic routed through the hop container is labelled hop="gascity"
+ccr_provider_routes_total{hop="gascity"}
+
+# The host CCR's own metrics are labelled hop="local" (default when PROXY_HOP is unset)
+ccr_provider_routes_total{hop="local"}
+```
+
+Open `http://127.0.0.1:9090` to query Prometheus directly.
