@@ -18,7 +18,7 @@ import { join } from "path";
 import { parseStatusLineData, StatusLineInput } from "./utils/statusline";
 import {handlePresetCommand} from "./utils/preset";
 import { handleInstallCommand } from "./utils/installCommand";
-import { attachSpawnErrorHandler } from "./utils/errors";
+import { attachSpawnErrorHandler, printError, EXIT_SERVICE_ERROR, EXIT_SYSTEM_ERROR } from "./utils/errors";
 
 
 const command = process.argv[2];
@@ -260,7 +260,16 @@ async function main() {
       }
       break;
     case "status":
-      await showStatus();
+      try {
+        await showStatus();
+      } catch (error) {
+        printError(
+          "service",
+          "Could not retrieve server status",
+          "Try: ccr restart"
+        );
+        process.exit(EXIT_SERVICE_ERROR);
+      }
       break;
     case "statusline":
       // Read JSON input from stdin
@@ -299,7 +308,16 @@ async function main() {
       break;
     case "activate":
     case "env":
-      await activateCommand(process.argv.slice(3));
+      try {
+        await activateCommand(process.argv.slice(3));
+      } catch (error) {
+        printError(
+          "system",
+          "Failed to write shell activation config",
+          "Check file permissions for your shell config file"
+        );
+        process.exit(EXIT_SYSTEM_ERROR);
+      }
       break;
     case "code":
       if (!isRunning) {
