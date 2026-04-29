@@ -29,8 +29,8 @@ while [ $iteration -lt $MAX_ITERATIONS ]; do
   echo "=== Iteration $((iteration + 1)) ==="
   echo "---"
 
-  # Check if any ready work is available (no blockers, not in_progress by another agent)
-  available=$(bd ready --assignee=ralph -n 100 --json 2>/dev/null | jq -r 'length')
+  # Check if any open orchestrator molecules are available for ralph
+  available=$(bd list --assignee=ralph --status=open -n 100 --json 2>/dev/null | jq -r 'length')
 
   if [ "$available" -eq 0 ]; then
     echo "No ready work available. Done."
@@ -42,7 +42,7 @@ while [ $iteration -lt $MAX_ITERATIONS ]; do
 
   # Let Claude see available work, pick one, claim it, and execute
   claude --dangerously-skip-permissions --output-format stream-json --verbose -p "
-Run \`bd ready --assignee=ralph -n 100 --sort=priority\` to see available tasks.
+Run \`bd list --assignee=ralph --status=open -n 100 --sort=priority\` to see available tasks.
 
 Also run \`bd list --status=in_progress --assignee=ralph\` to see what tasks other Ralph agents are currently working on.
 
