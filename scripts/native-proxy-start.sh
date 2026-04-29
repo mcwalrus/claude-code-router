@@ -127,6 +127,7 @@ NODE_ENV=production CCR_PORT=3456 CCR_HOST=127.0.0.1 \
     >> "${CCR_CONFIG_DIR}/logs/native-proxy.log" 2>&1 &
 NATIVE_PID=$!
 echo "${NATIVE_PID}" > .ccr-native.pid
+echo "${NATIVE_PID}" > "${CCR_CONFIG_DIR}/.claude-code-router.pid"
 
 printf "Starting (:3456)"
 i=0

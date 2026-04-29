@@ -32,6 +32,7 @@ if kill -0 "${PID}" 2>/dev/null; then
 fi
 
 rm -f "${PID_FILE}"
+rm -f "${CCR_CONFIG_DIR}/.claude-code-router.pid"
 
 # Restore config to pre-proxy state
 rm -f "${CCR_CONFIG_DIR}/config.json" "${CCR_CONFIG_DIR}/config.jsonc"
