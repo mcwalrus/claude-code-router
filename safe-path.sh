@@ -17,11 +17,9 @@ Get \`gascity-runner\` running on a docker image end-to-end using the tech-stack
 
 ## INSTRUCTIONS
 
-I want you to figure out the safest path to running ccr locally as the proxy on the same port the docker image proxy (from just local-proxy). This needs to be done safely as to not take done the local-proxy docker service.
-
-1. Read the codebase enough to understand what the goal requires.
-2. Write a plan file at \`plans/<goal-name>.md\` scoped to that repo.
-3. Run \`/choo-choo-ralph:spec plans/<goal-name>.md <goal-name>\` — review and resolve all \`<review>\` tags autonomously.
-4. Run \`/choo-choo-ralph:pour <goal-name> choo-choo-ralph\`.
+For this task, we need to figure out the safest path to employing the ccr claude-code-router setup locally.
+Previously I had this running out of a docker image, however this is in a broken state.
+Consider if running as a service via ccr start is a viable option.
+Use /criticial-path-theory to guide your thinking.
 
 Process repos in dependency order. Stop after all specs are poured." 2>&1 | "$(dirname "$0")/ralph-format.sh" $VERBOSE_FLAG || true
