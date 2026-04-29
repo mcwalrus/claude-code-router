@@ -76,7 +76,7 @@
       "depends_on": [
         "commit"
       ],
-      "condition": "auto_discovery == 'true'"
+      "condition": "{{auto_discovery}} == true"
     },
     {
       "id": "learning-capture",
@@ -88,7 +88,7 @@
       "depends_on": [
         "commit"
       ],
-      "condition": "auto_learnings == 'true'"
+      "condition": "{{auto_learnings}} == true"
     }
   ]
 }
