@@ -21,6 +21,17 @@
         ],
         "matcher": ""
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "bd dolt push",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
     ]
   },
   "permissions": {
