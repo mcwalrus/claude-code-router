@@ -1,0 +1,94 @@
+# ── CCR local Docker Compose stack ─────────────────────────────────────────
+# Mirrors the gascity-runner compose so we can validate end-to-end before
+# pushing changes to the runner image.
+#
+# Services:
+#   ccr-local    — host-facing CCR (routes to upstream providers)
+#   ccr-hop      — inner Docker CCR (forwards to ccr-local via host.docker.internal)
+#   prometheus   — scrapes CCR metrics (:9464 by default)
+#
+# Usage:
+#   just stack-up     (or: docker compose up -d)
+#   just stack-down   (or: docker compose down)
+#   just stack-metrics
+# ────────────────────────────────────────────────────────────────────────────
+
+services:
+  # ── Host-facing router ──────────────────────────────────────────────────
+  # This is the "outer" CCR — it has provider keys and routes to upstream APIs.
+  # In gascity-runner this runs on the VM host (or your Mac via Docker Desktop).
+  ccr-local:
+    build:
+      context: .
+      dockerfile: packages/server/Dockerfile
+    container_name: ccr-local
+    hostname: ccr-local
+    ports:
+      - "127.0.0.1:3456:3456"   # proxy port
+      - "127.0.0.1:9464:9464"   # metrics port
+    volumes:
+      - type: bind
+        source: ./config.jsonc
+        target: /root/.claude-code-router/config.json
+        read_only: true
+    env_file:
+      - .env
+    environment:
+      - CCR_HOST=0.0.0.0
+      - CCR_PORT=3456
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://127.0.0.1:3456/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+
+  # ── Hop-proxy (inner container) ─────────────────────────────────────────
+  # This CCR sits inside a Docker network and forwards to ccr-local on the host.
+  # It is what gascity-runner runs inside its container.
+  # Its config points Providers at host.docker.internal:3456 (ccr-local).
+  ccr-hop:
+    build:
+      context: .
+      dockerfile: packages/server/Dockerfile
+    container_name: ccr-hop
+    hostname: ccr-hop
+    ports:
+      - "127.0.0.1:3457:3456"   # exposed to host on 3457, internally 3456
+    volumes:
+      - type: bind
+        source: ./docker/hop-config.jsonc
+        target: /root/.claude-code-router/config.json
+        read_only: true
+    environment:
+      - CCR_HOST=0.0.0.0
+      - CCR_PORT=3456
+    depends_on:
+      ccr-local:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://127.0.0.1:3456/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+
+  # ── Prometheus scraper ────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    container_name: ccr-prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - type: bind
+        source: ./docker/prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+        read_only: true
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+      - "--web.enable-lifecycle"
+    depends_on:
+      - ccr-local

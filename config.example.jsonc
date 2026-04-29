@@ -11,6 +11,20 @@
   "API_TIMEOUT_MS": 600000,
   "NON_INTERACTIVE_MODE": false,
 
+  // ── Proxy hop (chain through another CCR instance) ─────────────────────────
+  // When CCR runs inside a container (e.g. gascity-runner) and should forward
+  // to a local CCR on the host instead of hitting upstream directly:
+  //   PROXY_HOP: "gascity"   — emitted as the `hop` Prometheus label
+  //   Providers still declare the *final* upstream; the outer host CCR routes there.
+  //
+  // Chain:  Claude Code → gascity CCR (Docker, :3456 internally / :3457 host)
+  //         → host CCR (:3456) → upstream provider
+  //
+  // In the gascity config, point the provider at the host CCR:
+  //   "api_base_url": "http://host.docker.internal:3456/v1/messages"
+  //
+  // "PROXY_HOP": "gascity",
+
   // ── Providers ──────────────────────────────────────────────────────────────
   // Declare one entry per API backend. api_key values use $VAR or ${VAR} syntax
   // and are injected from environment variables at startup.

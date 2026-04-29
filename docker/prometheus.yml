@@ -1,0 +1,26 @@
+# ── Prometheus scrape config for CCR ────────────────────────────────────────
+# Place at docker/prometheus.yml and mount into the Prometheus container.
+#
+# Targets:
+#   ccr-local:9464  — host-facing router metrics
+#   (ccr-hop also exposes 9464 but is not in the same Docker network;
+#    in production, Prometheus would scrape each CCR instance individually.)
+# ────────────────────────────────────────────────────────────────────────────
+
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'ccr-local'
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'ccr-local'
+    static_configs:
+      - targets: ['ccr-local:9464']
+    metrics_path: '/metrics'
+    # CCR metrics endpoint does not require auth by default; if auth is enabled
+    # you must configure basic_auth or bearer_token here.

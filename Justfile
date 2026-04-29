@@ -308,3 +308,153 @@ run-debug config="gemini-2.5":
         --env-file .env \
         -v "$(pwd)/config/{{config}}.json:/root/.claude-code-router/config.json:ro" \
         ccr:debug
+
+# ── Full observability stack ──────────────────────────────────────────────────
+
+# Spin up the full stack: CCR + Prometheus + optional hop-proxy.
+# Waits for health checks, prints reachable URLs.
+stack-up:
+    #!/usr/bin/env sh
+    set -e
+    if [ ! -f docker-compose.yml ]; then
+        echo "Error: docker-compose.yml not found in $(pwd)"
+        exit 1
+    fi
+    echo "Building CCR image..."
+    just build >/dev/null 2>&1
+    echo "Starting stack..."
+    docker compose up -d
+    echo ""
+    echo "Waiting for CCR health..."
+    i=0
+    while [ $i -lt 20 ]; do
+        if curl -sf http://127.0.0.1:3456/health >/dev/null 2>&1; then
+            echo "  CCR local:     OK  http://127.0.0.1:3456"
+            break
+        fi
+        printf "."
+        sleep 1
+        i=$((i+1))
+    done
+    if [ $i -ge 20 ]; then
+        echo "  CCR local:     FAIL -- check logs: docker compose logs ccr-local"
+        exit 1
+    fi
+    echo ""
+    echo "Waiting for Prometheus..."
+    i=0
+    while [ $i -lt 20 ]; do
+        if curl -sf http://127.0.0.1:9090/-/healthy >/dev/null 2>&1; then
+            echo "  Prometheus:    OK  http://127.0.0.1:9090"
+            break
+        fi
+        printf "."
+        sleep 1
+        i=$((i+1))
+    done
+    if [ $i -ge 20 ]; then
+        echo "  Prometheus:    FAIL -- check logs: docker compose logs prometheus"
+        exit 1
+    fi
+    echo ""
+    echo "========================================"
+    echo "Stack is up:"
+    echo "  CCR proxy:     http://127.0.0.1:3456"
+    echo "  CCR metrics:   http://127.0.0.1:9464/metrics"
+    echo "  Prometheus:    http://127.0.0.1:9090"
+    echo "  CCR hop-proxy: http://127.0.0.1:3457  (if enabled)"
+    echo "========================================"
+
+# Tear down the whole stack.
+stack-down:
+    docker compose down
+
+# Stream logs from the local CCR container.
+stack-logs:
+    docker compose logs -f ccr-local
+
+# Scrape and display current CCR Prometheus metrics.
+stack-metrics:
+    #!/usr/bin/env sh
+    if ! curl -sf http://127.0.0.1:9464/metrics >/dev/null 2>&1; then
+        echo "Error: CCR metrics endpoint not reachable at http://127.0.0.1:9464/metrics"
+        echo "Run 'just stack-up' first."
+        exit 1
+    fi
+    curl -s http://127.0.0.1:9464/metrics
+
+# ── Agent orchestration ───────────────────────────────────────────────────────
+
+# Start a CCR container for a specific agent worktree.
+# Mounts the worktree's own config and exposes a unique port.
+# Usage: just agent-dev <worktree-dir> [config-file]
+agent-dev worktree_dir config="":
+    #!/usr/bin/env sh
+    set -e
+    if [ ! -d "{{worktree_dir}}" ]; then
+        echo "Error: worktree directory not found: {{worktree_dir}}"
+        exit 1
+    fi
+    cfg="{{config}}"
+    if [ -z "$cfg" ]; then
+        if [ -f "{{worktree_dir}}/.claude/settings.json" ]; then
+            # Derive config name from project-id if possible
+            pid=$(jq -r '.project_id // empty' "{{worktree_dir}}/.claude/settings.json" 2>/dev/null)
+            if [ -n "$pid" ] && [ -f "config/${pid}.jsonc" ]; then
+                cfg="config/${pid}.jsonc"
+            fi
+        fi
+        if [ -z "$cfg" ]; then
+            if [ -f "config.jsonc" ]; then cfg="config.jsonc"
+            elif [ -f "config.json" ]; then cfg="config.json"
+            fi
+        fi
+    fi
+    if [ -z "$cfg" ] || [ ! -f "$cfg" ]; then
+        echo "Error: no config file found for worktree {{worktree_dir}}"
+        exit 1
+    fi
+    wt_name=$(basename "{{worktree_dir}}")
+    container_name="ccr-agent-${wt_name}"
+    free_port=$(python3 -c 'import socket, sys; s=socket.socket(); s.bind(("",0)); print(s.getsockname()[1]); s.close()' 2>/dev/null)
+    if [ -z "$free_port" ]; then
+        echo "Warning: could not find free port; letting Docker pick one"
+        port_map="0"
+    else
+        port_map="$free_port"
+    fi
+    docker rm -f "$container_name" >/dev/null 2>&1 || true
+    docker run -d \
+        --name "$container_name" \
+        -p "${port_map}:3456" \
+        -e NODE_ENV=development \
+        --env-file .env \
+        -v "$(pwd)/${cfg}:/root/.claude-code-router/config.json:ro" \
+        ccr:local \
+        node /app/packages/server/dist/index.js
+    actual_port=$(docker port "$container_name" 3456 | head -n1 | sed 's/.*://')
+    echo "========================================"
+    echo "Agent dev container started"
+    echo "  Name:    $container_name"
+    echo "  URL:     http://127.0.0.1:$actual_port"
+    echo "  Config:  $cfg"
+    echo "  Worktree: {{worktree_dir}}"
+    echo "========================================"
+
+# List all running agent CCR containers.
+agent-list:
+    docker ps --format "table {{ '{{' }}.Names{{ '}}' }}\t{{ '{{' }}.Ports{{ '}}' }}\t{{ '{{' }}.Status{{ '}}' }}" --filter "name=ccr-agent-"
+
+# Stop a specific agent container by name (full name or just the worktree suffix).
+# Usage: just agent-stop <name>
+agent-stop name:
+    #!/usr/bin/env sh
+    if docker rm -f "{{name}}" >/dev/null 2>&1; then
+        echo "Stopped {{name}}"
+        exit 0
+    fi
+    if docker rm -f "ccr-agent-{{name}}" >/dev/null 2>&1; then
+        echo "Stopped ccr-agent-{{name}}"
+        exit 0
+    fi
+    echo "Error: container not found: {{name}} or ccr-agent-{{name}}"
