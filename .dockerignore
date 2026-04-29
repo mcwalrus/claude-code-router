@@ -1,0 +1,58 @@
+# ── Version control & IDE ────────────────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+
+# ── Node.js build artifacts ──────────────────────────────────────────────────
+# Installed dependencies are re-created inside the builder stage by pnpm
+node_modules
+packages/*/node_modules
+
+# ── TypeScript / build output ────────────────────────────────────────────────
+# The builder stage runs `pnpm build`; dist is not needed in the build context
+packages/*/dist
+dist
+
+# ── Secrets & local config ───────────────────────────────────────────────────
+# Never bake API keys or local overrides into the image
+.env
+.env.*
+*.env
+config.jsonc
+config.json
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Beads issue tracker ──────────────────────────────────────────────────────
+.beads/
+
+# ── Claude Code ──────────────────────────────────────────────────────────────
+.claude/
+
+# ── OS / editor noise ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# ── Test artefacts ───────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ── Docs & scripts not needed at runtime ────────────────────────────────────
+docs/
+blog/
+plans/
+scripts/
+ralph-1/
+workflows/
+
+# ── Docker files themselves (not needed inside the build context payload) ────
+docker-compose.yml
+docker-compose*.yml
+Dockerfile*
+.dockerignore
