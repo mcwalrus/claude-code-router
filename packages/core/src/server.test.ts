@@ -191,3 +191,82 @@ describe('routerHook → addModelSplitHook ordering in "/" namespace', () => {
     expect(body.model).toEqual(['gpt-4o'])
   })
 })
+
+// Mirrors the hook registration order in registerNamespace(name) for non-'/' namespaces (server.ts):
+//   1. routerHook (preHandler) — rewrites body.model to "provider,model" format
+//   2. addModelSplitHook    — splits body.model into req.provider / req.model
+// Named namespaces are registered with a URL prefix; the same ordering guarantee must hold.
+describe('routerHook → addModelSplitHook ordering in named namespaces', () => {
+  const apps: ReturnType<typeof Fastify>[] = []
+
+  afterEach(async () => {
+    for (const app of apps) {
+      await app.close()
+    }
+    apps.length = 0
+  })
+
+  function buildAppWithNamedNamespace(prefix: string, routerModel: string) {
+    const app = Fastify({ logger: false })
+    apps.push(app)
+
+    app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+      try {
+        done(null, JSON.parse(body as string))
+      } catch (err) {
+        done(err as Error, undefined)
+      }
+    })
+
+    app.register(async (fastify) => {
+      // Simulate routerHook: runs first and rewrites body.model to "provider,model" format
+      fastify.addHook('preHandler', async (req: any) => {
+        const url = new URL(`http://127.0.0.1${req.url}`)
+        if (url.pathname.endsWith('/v1/messages') && req.body) {
+          req.body.model = routerModel
+        }
+      })
+
+      addModelSplitHook(fastify)
+
+      fastify.post('/v1/messages', async (req: any) => ({
+        provider: req.provider,
+        model: req.model,
+      }))
+    }, { prefix })
+
+    return app
+  }
+
+  it('splits provider and model from the router-rewritten body.model in a named namespace', async () => {
+    const app = await buildAppWithNamedNamespace('/project-1', 'anthropic,claude-sonnet-4-6')
+    await app.ready()
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/project-1/v1/messages',
+      payload: { model: 'claude-opus-4-7', messages: [] },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.provider).toBe('anthropic')
+    expect(body.model).toEqual(['claude-sonnet-4-6'])
+  })
+
+  it('reflects the router-chosen provider in a named namespace even when the original request used a different model', async () => {
+    const app = await buildAppWithNamedNamespace('/project-1', 'openai,gpt-4o')
+    await app.ready()
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/project-1/v1/messages',
+      payload: { model: 'claude-opus-4-7', messages: [] },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.provider).toBe('openai')
+    expect(body.model).toEqual(['gpt-4o'])
+  })
+})
